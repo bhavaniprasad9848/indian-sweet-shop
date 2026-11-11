@@ -16,6 +16,7 @@ from ..models import (Category, EmailLog, InventoryBatch, Order, OrderItem, Prod
 from ..services import analytics_service as an
 from ..services import inventory_service as inv
 from ..services import report_service as rs
+from ..services.email_service import provider_label
 from ..services.invoice_service import build_credit_note_pdf, build_invoice_pdf
 from ..services.order_service import ADMIN_TRANSITIONS, OrderError, update_status
 from ..utils.helpers import slugify
@@ -391,7 +392,7 @@ def emails():
     if cat:
         q = q.filter_by(category=cat)
     pag = q.order_by(EmailLog.created_at.desc()).paginate(page=page, per_page=30, error_out=False)
-    return render_template("admin/emails.html", pag=pag, cat=cat, smtp=bool(current_app.config["MAIL_SERVER"]))
+    return render_template("admin/emails.html", pag=pag, cat=cat, provider=provider_label())
 
 
 @bp.route("/emails/<int:eid>")

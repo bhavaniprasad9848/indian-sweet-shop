@@ -14,6 +14,7 @@ from ..extensions import csrf, db
 from ..models import Address, Order
 from ..services import cart_service, payment_service as ps
 from ..services.order_service import OrderError, confirm_order, create_pending_order
+from ..services.email_service import email_enabled
 from ..services.otp_service import OTPError, issue_otp, seconds_until_resend, verify_otp
 from ..utils.helpers import mask_email
 from ..utils.security import client_ip, customer_required
@@ -32,7 +33,7 @@ def _own_order(number):
 def _send_order_otp(order):
     code = issue_otp(order.customer_email, "order", order.id, ip=client_ip(),
                      context={"order_number": order.order_number, "total": order.grand_total})
-    if current_app.config["SHOW_DEV_OTP"] and not current_app.config["MAIL_SERVER"]:
+    if current_app.config["SHOW_DEV_OTP"] and not email_enabled():
         flash(f"Dev mode (SMTP not configured): your order code is {code}", "dev")
 
 

@@ -2,9 +2,14 @@
 
 Every message is recorded in EmailLogs whatever happens, so the admin can audit deliveries.
 """
+import base64
+import json
 import os
 import re
 import smtplib
+import urllib.error
+import urllib.request
+from email.utils import parseaddr
 import ssl
 from datetime import datetime
 from email.message import EmailMessage
@@ -14,6 +19,38 @@ from flask import current_app, render_template
 
 from ..extensions import db
 from ..models import EmailLog
+
+
+def email_enabled():
+    """True when real delivery is configured (Brevo API or SMTP)."""
+    cfg = current_app.config
+    return bool(cfg.get("BREVO_API_KEY") or cfg.get("MAIL_SERVER"))
+
+
+def provider_label():
+    cfg = current_app.config
+    if cfg.get("BREVO_API_KEY"):
+        return "Brevo email API"
+    if cfg.get("MAIL_SERVER"):
+        return f"SMTP ({cfg['MAIL_SERVER']})"
+    return None
+
+
+def _send_brevo(to, subject, html, text, attachments):
+    cfg = current_app.config
+    name, addr = parseaddr(cfg["MAIL_DEFAULT_SENDER"])
+    payload = {"sender": {"email": addr, "name": name or cfg["STORE_NAME"]}, "to": [{"email": to}],
+               "subject": subject, "htmlContent": html, "textContent": text}
+    if attachments:
+        payload["attachment"] = [{"name": fn, "content": base64.b64encode(data).decode()} for fn, data, _ in attachments]
+    req = urllib.request.Request("https://api.brevo.com/v3/smtp/email", data=json.dumps(payload).encode(),
+                                 headers={"api-key": cfg["BREVO_API_KEY"], "content-type": "application/json",
+                                          "accept": "application/json"}, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            resp.read()
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"Brevo {e.code}: {e.read().decode(errors='replace')[:300]}") from None
 
 
 def _html_to_text(html):
@@ -42,7 +79,15 @@ def send_email(to, subject, html, category, order_id=None, attachments=None):
     log = EmailLog(recipient=to, subject=subject, category=category, order_id=order_id, html_body=html,
                    attachment_name=", ".join(a[0] for a in attachments) or None)
 
-    if cfg["MAIL_SERVER"]:
+    if cfg.get("BREVO_API_KEY"):
+        try:
+            _send_brevo(to, subject, html, _html_to_text(html), attachments)
+            log.status = "sent"
+        except Exception as exc:  # never break checkout over email
+            current_app.logger.exception("Brevo send failed")
+            log.status = "failed"
+            log.error = str(exc)[:500]
+    elif cfg["MAIL_SERVER"]:
         try:
             if cfg["MAIL_USE_SSL"]:
                 server = smtplib.SMTP_SSL(cfg["MAIL_SERVER"], cfg["MAIL_PORT"], timeout=20,

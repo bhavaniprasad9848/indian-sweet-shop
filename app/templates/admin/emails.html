@@ -2,7 +2,7 @@
 {% from "_macros.html" import pagination with context %}
 {% block title %}Email log{% endblock %}
 {% block heading %}Email log{% endblock %}
-{% block subheading %}<p class="admin-sub">{% if smtp %}Delivering through SMTP ({{ config.MAIL_SERVER }}).{% else %}SMTP is not configured — emails are written to <code>instance/outbox/</code> as .eml files and shown here.{% endif %}</p>{% endblock %}
+{% block subheading %}<p class="admin-sub">{% if provider %}Delivering through {{ provider }}.{% else %}Email delivery is not configured — emails are written to <code>instance/outbox/</code> as .eml files and shown here.{% endif %}</p>{% endblock %}
 {% block content %}
 <div class="chip-filter mb-3">
   {% for k, l in [('', 'All'), ('otp', 'OTP'), ('order_confirmation', 'Order confirmations'), ('cancellation', 'Cancellations'), ('status', 'Status updates')] %}

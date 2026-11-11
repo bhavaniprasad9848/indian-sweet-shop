@@ -6,6 +6,7 @@ from flask_login import current_user, login_user, logout_user
 
 from ..extensions import db
 from ..models import Admin, User
+from ..services.email_service import email_enabled
 from ..services.otp_service import OTPError, issue_otp, seconds_until_resend, verify_otp
 from ..utils.helpers import mask_email
 from ..utils.security import check_login_rate, client_ip, is_safe_next, login_limiter
@@ -17,7 +18,7 @@ PENDING_KEY = "pending_auth"
 
 
 def _dev_otp(code):
-    if current_app.config["SHOW_DEV_OTP"] and not current_app.config["MAIL_SERVER"]:
+    if current_app.config["SHOW_DEV_OTP"] and not email_enabled():
         flash(f"Dev mode (SMTP not configured): your code is {code}", "dev")
 
 

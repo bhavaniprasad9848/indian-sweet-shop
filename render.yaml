@@ -22,19 +22,11 @@ services:
         value: America/Chicago
       - key: PAYMENT_GATEWAY
         value: simulated
-      # Demo mode: shows the OTP on screen because no email server is set yet.
-      # After adding the MAIL_* settings below, change this to "false".
+      # Shows the OTP on screen only while no email delivery (BREVO_API_KEY) is configured.
+      # Set to "false" once Brevo is working.
       - key: SHOW_DEV_OTP
         value: "true"
-      - key: MAIL_SERVER
-        sync: false
-      - key: MAIL_PORT
-        value: "587"
-      - key: MAIL_USE_TLS
-        value: "true"
-      - key: MAIL_USERNAME
-        sync: false
-      - key: MAIL_PASSWORD
+      - key: BREVO_API_KEY         # email over HTTPS — Render free plan blocks SMTP
         sync: false
       - key: MAIL_DEFAULT_SENDER
         sync: false

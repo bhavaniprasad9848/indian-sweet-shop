@@ -60,7 +60,10 @@ class Config:
     STORE_TIMEZONE = os.environ.get("STORE_TIMEZONE", "America/Chicago")
     LOW_STOCK_THRESHOLD = int(os.environ.get("LOW_STOCK_THRESHOLD", "15"))
 
-    # Email (SMTP). When MAIL_SERVER is empty, emails go to instance/outbox/ and EmailLogs.
+    # Email over HTTPS via Brevo (works on hosts that block SMTP ports, e.g. Render free tier).
+    # Takes priority over SMTP when set. Sender must be verified in Brevo → Senders.
+    BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "").strip()
+    # Email (SMTP). With neither Brevo nor MAIL_SERVER, emails go to instance/outbox/ and EmailLogs.
     MAIL_SERVER = os.environ.get("MAIL_SERVER", "")
     MAIL_PORT = int(os.environ.get("MAIL_PORT", "587"))
     MAIL_USE_TLS = _bool("MAIL_USE_TLS", True)
