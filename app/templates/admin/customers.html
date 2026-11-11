@@ -1,0 +1,21 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import pagination with context %}
+{% block title %}Customers{% endblock %}
+{% block heading %}Customers{% endblock %}
+{% block top_actions %}<a href="{{ url_for('admin.reports', kind='customers') }}" class="btn btn-sm btn-outline-maroon"><i class="bi bi-download"></i> Customer report</a>{% endblock %}
+{% block content %}
+<form class="toolbar mb-3"><input class="form-control" name="q" value="{{ q }}" placeholder="Search name, email, phone"><button class="btn btn-maroon">Search</button></form>
+<div class="panel p-0"><div class="table-responsive">
+<table class="table table-elegant mb-0">
+  <thead><tr><th>Customer</th><th>Phone</th><th>Joined</th><th>Verified</th><th class="text-end">Orders</th><th class="text-end">Lifetime value</th><th></th></tr></thead>
+  <tbody>
+  {% for u in pag.items %}{% set st = stats.get(u.id, (0, 0)) %}
+    <tr><td><b>{{ u.name }}</b><br><small class="text-muted">{{ u.email }}</small></td><td>{{ u.phone }}</td><td>{{ u.created_at|d }}</td>
+      <td>{{ '<span class="status-pill s-green">Yes</span>'|safe if u.is_verified else '<span class="status-pill s-muted">Pending</span>'|safe }}</td>
+      <td class="text-end">{{ st[0] }}</td><td class="text-end">{{ (st[1] or 0)|money }}</td>
+      <td class="text-end"><a class="btn btn-sm btn-outline-maroon" href="{{ url_for('admin.orders', q=u.email) }}">Orders</a></td></tr>
+  {% else %}<tr><td colspan="7" class="text-center text-muted py-4">No customers.</td></tr>{% endfor %}
+  </tbody>
+</table></div></div>
+{{ pagination(pag, 'admin.customers') }}
+{% endblock %}

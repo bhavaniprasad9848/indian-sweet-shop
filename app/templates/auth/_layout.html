@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container section auth-wrap">
+  <div class="auth-card {% block auth_variant %}{% endblock %}">
+    <div class="auth-side">
+      <div class="auth-side-inner">
+        <img src="{{ url_for('static', filename='images/logo-mark.svg') }}" alt="" width="72">
+        <h2>{% block side_title %}स्वागत है{% endblock %}</h2>
+        <p>{% block side_text %}Fresh mithai, OTP-protected accounts and order tracking from kadhai to doorstep.{% endblock %}</p>
+        <div class="mandala-spin" aria-hidden="true"></div>
+      </div>
+    </div>
+    <div class="auth-main">{% block auth_body %}{% endblock %}</div>
+  </div>
+</div>
+{% endblock %}

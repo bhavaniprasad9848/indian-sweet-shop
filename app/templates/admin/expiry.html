@@ -1,0 +1,42 @@
+{% extends "admin/base.html" %}
+{% block title %}Expiry tracker{% endblock %}
+{% block heading %}Expiry tracker{% endblock %}
+{% block subheading %}<p class="admin-sub">Expired batches are automatically excluded from sale. Write them off to clear them from stock.</p>{% endblock %}
+{% block top_actions %}<a href="{{ url_for('admin.reports', kind='expiry') }}" class="btn btn-sm btn-outline-maroon"><i class="bi bi-download"></i> Expiry report</a>{% endblock %}
+{% block content %}
+{% set sections = [
+  ('expired', 'Expired products', 'danger', 'bi-x-octagon'),
+  ('today', 'Expiring today', 'orange', 'bi-alarm'),
+  ('3days', 'Expiring within 3 days', 'orange', 'bi-hourglass-bottom'),
+  ('7days', 'Expiring within 7 days', 'warning', 'bi-hourglass-split'),
+  ('fresh', 'Longer shelf life', 'success', 'bi-check2-circle'),
+] %}
+<div class="expiry-summary mb-4">
+  {% for key, label, tone, icon in sections %}
+    <a href="#sec-{{ key }}" class="exp-sum exp-{{ tone }}"><i class="bi {{ icon }}"></i><b>{{ buckets[key]|length }}</b><span>{{ label }}</span></a>
+  {% endfor %}
+</div>
+{% for key, label, tone, icon in sections %}
+<section class="panel p-0 mb-4 exp-section exp-border-{{ tone }}" id="sec-{{ key }}">
+  <div class="panel-head px-3 pt-3"><h5><i class="bi {{ icon }}"></i> {{ label }} <span class="text-muted fw-normal">({{ buckets[key]|length }})</span></h5></div>
+  {% if buckets[key] %}
+  <div class="table-responsive"><table class="table table-elegant align-middle mb-0">
+    <thead><tr><th>Product</th><th>Batch</th><th>Manufactured</th><th>Expires</th><th class="text-end">Available</th><th class="text-end">Sold</th><th></th></tr></thead>
+    <tbody>
+    {% for b in buckets[key] %}{% set lv = expiry_level(b.expiration_date) %}
+      <tr class="exp-row-{{ lv[2] }}">
+        <td><a href="{{ url_for('admin.product_stock', pid=b.product_id) }}"><b>{{ b.product.name }}</b></a></td>
+        <td>{{ b.batch_number }}</td><td>{{ b.manufacturing_date|d }}</td>
+        <td><span class="exp-chip exp-{{ lv[2] }}">{{ b.expiration_date|d }} · {{ lv[1] }}</span></td>
+        <td class="text-end">{{ b.quantity_available }}</td><td class="text-end">{{ b.quantity_sold }}</td>
+        <td class="text-end">{% if key in ('expired', 'today') %}
+          <form method="post" action="{{ url_for('admin.batch_writeoff', bid=b.id) }}" onsubmit="return confirm('Write off this batch?')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline-danger">Write off</button></form>
+        {% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}<p class="text-muted px-3 pb-3 mb-0">Nothing here — good news.</p>{% endif %}
+</section>
+{% endfor %}
+{% endblock %}

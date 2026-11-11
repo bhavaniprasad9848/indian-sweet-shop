@@ -1,0 +1,46 @@
+{% extends "admin/base.html" %}
+{% block title %}Inventory{% endblock %}
+{% block heading %}Inventory &amp; stock{% endblock %}
+{% block subheading %}<p class="admin-sub">Sellable stock excludes expired and written-off batches. Sales deduct from the earliest-expiring batch first (FIFO).</p>{% endblock %}
+{% block top_actions %}
+<a href="{{ url_for('admin.reports', kind='inventory') }}" class="btn btn-sm btn-outline-maroon"><i class="bi bi-download"></i> Inventory report</a>
+{% endblock %}
+{% block content %}
+<div class="legend mb-3">
+  <span class="exp-chip exp-danger">Expired</span><span class="exp-chip exp-orange">≤ 3 days</span><span class="exp-chip exp-warning">≤ 7 days</span><span class="exp-chip exp-success">Fresh</span>
+</div>
+<div class="panel p-0"><div class="table-responsive">
+<table class="table table-elegant align-middle mb-0">
+  <thead><tr><th>Product</th><th>Category</th><th class="text-end">Available</th><th class="text-end">Sold (all time)</th><th>Nearest expiry</th><th style="width:340px">Quick restock (made today)</th></tr></thead>
+  <tbody>
+  {% for p in products %}{% set st = stocks.get(p.id, 0) %}
+    <tr class="{{ 'row-muted' if not p.is_active }}">
+      <td><a href="{{ url_for('admin.product_stock', pid=p.id) }}"><b>{{ p.name }}</b></a>{% if not p.is_active %} <small class="text-muted">(inactive)</small>{% endif %}<br><small class="text-muted">{{ p.unit_label }}</small></td>
+      <td>{{ p.category.name }}</td>
+      <td class="text-end"><span class="status-pill {{ 's-red' if st == 0 else 's-orange' if st <= low else 's-green' }}">{{ st }}</span></td>
+      <td class="text-end">{{ sold.get(p.id) or 0 }}</td>
+      <td>{% if p.id in nearest %}{% set lv = expiry_level(nearest[p.id]) %}<span class="exp-chip exp-{{ lv[2] }}">{{ nearest[p.id].strftime('%d %b %Y') }} · {{ lv[1] }}</span>{% else %}<span class="text-muted">No sellable batch</span>{% endif %}</td>
+      <td>
+        <form method="post" action="{{ url_for('admin.product_stock', pid=p.id) }}" class="d-flex gap-1">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="manufacturing_date" value="{{ today }}">
+          <input type="number" class="form-control form-control-sm" name="quantity" min="1" placeholder="Qty" style="width:80px" required>
+          <input type="date" class="form-control form-control-sm" name="expiration_date" data-shelf="{{ p.shelf_life_days }}" required>
+          <button class="btn btn-sm btn-saffron"><i class="bi bi-plus-lg"></i></button>
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+  // Prefill each quick-restock expiry from the product's shelf life
+  document.querySelectorAll('input[data-shelf]').forEach(el => {
+    if (el.value) return;
+    const d = new Date(); d.setDate(d.getDate() + parseInt(el.dataset.shelf || '3', 10));
+    el.value = d.toISOString().slice(0, 10);
+  });
+</script>
+{% endblock %}

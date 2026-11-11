@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% from "_macros.html" import product_card, veg_mark, divider with context %}
+{% set p = item.p %}
+{% block title %}{{ p.name }}{% endblock %}
+{% block content %}
+<div class="container section pt-4">
+  <nav aria-label="breadcrumb"><ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('main.home') }}">Home</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('main.shop', category=p.category.slug) }}">{{ p.category.name }}</a></li>
+    <li class="breadcrumb-item active">{{ p.name }}</li>
+  </ol></nav>
+
+  <div class="row g-5 align-items-start">
+    <div class="col-lg-6">
+      <div class="product-hero-media">
+        <img src="{{ url_for('static', filename=p.image_url) }}" alt="{{ p.name }}">
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <span class="eyebrow">{{ p.category.name }}</span>
+      <div class="d-flex align-items-center gap-3">
+        <h1 class="product-title mb-0">{{ p.name }}</h1>{{ veg_mark(p.is_veg) }}
+      </div>
+      <p class="lead-text mt-3">{{ p.description }}</p>
+
+      <div class="price-row">
+        <span class="price big">{{ p.price|money }}</span>
+        <span class="text-muted">per {{ p.unit_label }}{% if p.weight_grams %} · {{ p.weight_grams }} g{% endif %}</span>
+      </div>
+      <p class="small text-muted mb-3">{{ config.TAX_LABEL }} and delivery are calculated at checkout.</p>
+
+      <div class="fact-grid">
+        <div><small>Available today</small><b class="{{ 'text-danger' if item.stock < 10 }}">{{ item.stock }} {{ 'unit' if item.stock == 1 else 'units' }}</b></div>
+        <div><small>Shelf life</small><b>{{ p.shelf_life_days }} day{{ 's' if p.shelf_life_days != 1 }}</b></div>
+        <div><small>Best before (current batch)</small>
+          <b>{% if item.expiry %}{{ item.expiry.strftime('%d %b %Y') }}{% else %}—{% endif %}</b>
+          {% if level %}<span class="exp-chip exp-{{ level[2] }}">{{ level[1] }}</span>{% endif %}
+        </div>
+        <div><small>Diet</small><b>{{ 'Vegetarian' if p.is_veg else 'Contains egg / meat' }}</b></div>
+      </div>
+
+      <form method="post" action="{{ url_for('cart.add') }}" class="buy-box" data-ajax-cart>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="product_id" value="{{ p.id }}">
+        <div class="qty-stepper" data-stepper>
+          <button type="button" data-step="-1" aria-label="Decrease">−</button>
+          <input type="number" name="quantity" value="1" min="1" max="{{ [item.stock, 50]|min or 1 }}" aria-label="Quantity">
+          <button type="button" data-step="1" aria-label="Increase">+</button>
+        </div>
+        <button class="btn btn-saffron btn-lg flex-grow-1" {% if item.stock == 0 %}disabled{% endif %}>
+          <i class="bi bi-bag-plus"></i> {{ 'Add to cart' if item.stock else 'Sold out today' }}
+        </button>
+      </form>
+
+      <h5 class="mt-4 section-mini">Ingredients</h5>
+      <div class="ingredient-list">
+        {% for ing in p.ingredients %}<span class="ingredient {{ 'allergen' if ing.is_allergen }}" {% if ing.is_allergen %}title="Allergen"{% endif %}>{{ ing.name }}{% if ing.is_allergen %} <i class="bi bi-exclamation-circle"></i>{% endif %}</span>{% endfor %}
+      </div>
+      {% if p.ingredients|selectattr('is_allergen')|list %}<p class="small text-muted mt-2"><i class="bi bi-exclamation-circle"></i> Highlighted ingredients are common allergens.</p>{% endif %}
+    </div>
+  </div>
+
+  {% if related %}
+  <div class="mt-5">
+    {{ divider('You may also like') }}
+    <div class="product-grid">{% for r in related %}{{ product_card(r) }}{% endfor %}</div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

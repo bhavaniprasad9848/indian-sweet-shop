@@ -1,0 +1,5 @@
+<ol class="checkout-steps">
+  {% for n, label in [(1,'Address'),(2,'Verify OTP'),(3,'Payment'),(4,'Confirmed')] %}
+    <li class="{{ 'done' if n < step else 'current' if n == step }}"><span>{{ n }}</span>{{ label }}</li>
+  {% endfor %}
+</ol>

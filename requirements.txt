@@ -1,0 +1,19 @@
+Flask>=3.0,<4
+Flask-SQLAlchemy>=3.1
+SQLAlchemy>=2.0
+Flask-Login>=0.6.3
+Flask-WTF>=1.2
+Flask-Migrate>=4.0
+python-dotenv>=1.0
+reportlab>=4.0
+openpyxl>=3.1
+stripe>=8.0
+tzdata>=2024.1
+# MySQL support (only needed when DATABASE_URL points at MySQL)
+PyMySQL>=1.1
+cryptography>=42
+# Production server
+gunicorn>=22.0; platform_system != "Windows"
+waitress>=3.0; platform_system == "Windows"
+# Tests
+pytest>=8.0

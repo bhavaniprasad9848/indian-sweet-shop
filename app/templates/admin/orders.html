@@ -1,0 +1,36 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import status_badge, pay_badge, pagination with context %}
+{% block title %}Orders{% endblock %}
+{% block heading %}Orders{% endblock %}
+{% block content %}
+<div class="chip-filter mb-3">
+  <a href="{{ url_for('admin.orders') }}" class="{{ 'active' if not status }}">All placed</a>
+  {% for s, l in statuses %}<a href="{{ url_for('admin.orders', status=s) }}" class="{{ 'active' if status == s }}">{{ 'Drafts (unverified)' if s == 'pending' else l }} <small>{{ counts.get(s, 0) }}</small></a>{% endfor %}
+</div>
+<form class="toolbar mb-3">
+  {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
+  <input class="form-control" name="q" value="{{ q }}" placeholder="Order ID, customer name, email or phone">
+  <input type="date" class="form-control w-auto" name="start" value="{{ request.args.start or '' }}">
+  <input type="date" class="form-control w-auto" name="end" value="{{ request.args.end or '' }}">
+  <button class="btn btn-maroon">Filter</button>
+</form>
+<div class="panel p-0"><div class="table-responsive">
+<table class="table table-elegant align-middle mb-0">
+  <thead><tr><th>Order</th><th>Customer</th><th>Items</th><th class="text-end">Total</th><th>Payment</th><th>Placed</th><th>Delivery</th><th>Status</th></tr></thead>
+  <tbody>
+  {% for o in pag.items %}
+    <tr class="clickable" onclick="location.href='{{ url_for('admin.order_detail', number=o.order_number) }}'">
+      <td><b>{{ o.order_number }}</b></td>
+      <td>{{ o.customer_name }}<br><small class="text-muted">{{ o.customer_email }} · {{ o.customer_phone }}</small></td>
+      <td><small>{% for i in o.items[:3] %}{{ i.product_name }} × {{ i.quantity }}{{ ', ' if not loop.last }}{% endfor %}{% if o.items|length > 3 %} +{{ o.items|length - 3 }} more{% endif %}</small></td>
+      <td class="text-end">{{ o.grand_total|money }}</td>
+      <td>{{ o.payment_method_label }}<br>{{ pay_badge(o.payment_status) }}</td>
+      <td>{{ o.created_at|dt }}</td>
+      <td><small>{{ o.ship_city }}, {{ o.ship_state }}</small></td>
+      <td>{{ status_badge(o.status) }}</td>
+    </tr>
+  {% else %}<tr><td colspan="8" class="text-center text-muted py-4">No orders found.</td></tr>{% endfor %}
+  </tbody>
+</table></div></div>
+{{ pagination(pag, 'admin.orders') }}
+{% endblock %}

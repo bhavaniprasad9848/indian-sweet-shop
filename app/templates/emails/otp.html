@@ -1,0 +1,11 @@
+{% extends "emails/_layout.html" %}
+{% block badge %}Verification{% endblock %}
+{% block body %}
+<p style="font:18px Georgia,serif;color:#7B1E2B;margin:8px 0 12px;">Namaste,</p>
+<p>Use this one-time code to {{ purpose_text }}{% if context.order_number %} <b>{{ context.order_number }}</b> ({{ context.total|money }}){% endif %}:</p>
+<div style="text-align:center;margin:22px 0;">
+  <span style="display:inline-block;background:#FFF3DF;border:2px dashed #D4A017;border-radius:8px;padding:14px 26px;font:bold 34px 'Courier New',monospace;letter-spacing:10px;color:#7B1E2B;">{{ code }}</span>
+</div>
+<p>The code expires in <b>{{ ttl_minutes }} minutes</b>. If you didn't request it, you can safely ignore this email — no one can access your account without it.</p>
+<p style="color:#8A6E5A;font-size:12px;">For your security, never share this code with anyone, including our staff.</p>
+{% endblock %}

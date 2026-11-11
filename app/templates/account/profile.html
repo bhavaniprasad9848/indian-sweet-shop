@@ -1,0 +1,49 @@
+{% extends "account/_layout.html" %}
+{% from "_macros.html" import status_badge with context %}
+{% block title %}My profile{% endblock %}
+{% block account_body %}
+<div class="row g-3 mb-4">
+  <div class="col-sm-4"><div class="mini-stat"><small>Orders placed</small><b>{{ stats.orders }}</b></div></div>
+  <div class="col-sm-4"><div class="mini-stat"><small>Saved addresses</small><b>{{ stats.addresses }}</b></div></div>
+  <div class="col-sm-4"><div class="mini-stat"><small>Member since</small><b>{{ current_user.created_at|d('%b %Y') }}</b></div></div>
+</div>
+<div class="row g-4">
+  <div class="col-md-6">
+    <div class="panel h-100">
+      <h5 class="section-mini">Personal details</h5>
+      <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="profile">
+        <label class="form-label">Full name</label><input class="form-control mb-3" name="name" value="{{ current_user.name }}">
+        <label class="form-label">Email <span class="badge text-bg-success">verified</span></label><input class="form-control mb-3" value="{{ current_user.email }}" disabled>
+        <label class="form-label">Phone</label><input class="form-control mb-3" name="phone" value="{{ current_user.phone }}">
+        <button class="btn btn-saffron">Save changes</button>
+      </form>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="panel h-100">
+      <h5 class="section-mini">Change password</h5>
+      <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="password">
+        <label class="form-label">Current password</label><input type="password" class="form-control mb-3" name="current" required>
+        <label class="form-label">New password</label><input type="password" class="form-control mb-3" name="new" required minlength="8">
+        <label class="form-label">Confirm new password</label><input type="password" class="form-control mb-3" name="confirm" required>
+        <button class="btn btn-outline-maroon">Update password</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% if recent %}
+<div class="panel mt-4">
+  <div class="d-flex justify-content-between"><h5 class="section-mini">Recent orders</h5><a href="{{ url_for('account.orders') }}">All orders →</a></div>
+  {% for o in recent %}
+  <a class="order-line" href="{{ url_for('account.order_detail', number=o.order_number) }}">
+    <span><b>{{ o.order_number }}</b><small>{{ o.created_at|dt }}</small></span>
+    <span>{{ o.item_count }} items</span><span>{{ o.grand_total|money }}</span>{{ status_badge(o.status) }}
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

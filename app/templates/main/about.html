@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% from "_macros.html" import divider with context %}
+{% block title %}Our story{% endblock %}
+{% block content %}
+<section class="page-banner"><div class="container">
+  <span class="eyebrow light">हमारी कहानी</span><h1>Three generations at the kadhai</h1>
+  <p>{{ store.tagline }}</p>
+</div></section>
+<div class="container section narrow">
+  <p class="lead-text">What began as a single halwai counter in 1987 is now a full kitchen — but the method hasn't changed. Milk is reduced slowly over wood-fired heat for our peda and kalakand, besan is roasted in desi ghee until it smells of toasted nuts, and every tray is labelled with its batch number and best-before date.</p>
+  {{ divider() }}
+  <div class="row g-4 text-center">
+    <div class="col-md-4"><div class="value-card"><i class="bi bi-calendar-check"></i><h5>Batch tracked</h5><p>Each tray carries a manufacturing and expiry date. Expired stock is never sold.</p></div></div>
+    <div class="col-md-4"><div class="value-card"><i class="bi bi-flower2"></i><h5>Honest ingredients</h5><p>Kashmiri saffron, Bronte-grade pistachio, cardamom from Idukki — listed on every product.</p></div></div>
+    <div class="col-md-4"><div class="value-card"><i class="bi bi-gift"></i><h5>Festival ready</h5><p>Diwali, Rakhi, Eid, Pongal and weddings — we pack gift boxes to order.</p></div></div>
+  </div>
+</div>
+{% endblock %}

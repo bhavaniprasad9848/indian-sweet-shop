@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Payment{% endblock %}
+{% block content %}
+<div class="container section pt-4">
+  {% set step = 3 %}{% include "checkout/_steps.html" %}
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="panel">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="section-mini mb-0">Choose payment method</h5>
+          <span class="test-badge"><i class="bi bi-cone-striped"></i> Test mode</span>
+        </div>
+
+        {% if stripe %}
+        <form method="post" action="{{ url_for('checkout.stripe_start', number=order.order_number) }}" class="stripe-box mb-4">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div><b>Pay securely with Stripe</b><div class="small text-muted">Cards, Apple Pay / Google Pay and other methods enabled on your Stripe account. Use 4242 4242 4242 4242.</div></div>
+          <button class="btn btn-maroon">Pay {{ order.grand_total|money }} with Stripe</button>
+        </form>
+        <p class="text-center small text-muted">— or use the built-in test gateway —</p>
+        {% endif %}
+
+        <ul class="nav pay-tabs" role="tablist">
+          <li><button class="active" data-bs-toggle="tab" data-bs-target="#payCard" type="button"><i class="bi bi-credit-card-2-front"></i> Credit / Debit card</button></li>
+          <li><button data-bs-toggle="tab" data-bs-target="#payUpi" type="button"><i class="bi bi-phone"></i> UPI</button></li>
+          {% if cod %}<li><button data-bs-toggle="tab" data-bs-target="#payCod" type="button"><i class="bi bi-cash-coin"></i> Cash on Delivery</button></li>{% endif %}
+        </ul>
+        <div class="tab-content pt-3">
+          <div class="tab-pane fade show active" id="payCard">
+            <form method="post" autocomplete="off" data-pay-form>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="nonce" value="{{ nonce }}">
+              <input type="hidden" name="method" value="card">
+              <div class="card-visual mb-3" aria-hidden="true">
+                <div class="chip"></div><div class="cv-number" data-cv-number>•••• •••• •••• ••••</div>
+                <div class="d-flex justify-content-between"><span data-cv-name>CARDHOLDER</span><span data-cv-exp>MM/YY</span></div>
+              </div>
+              <div class="row g-3">
+                <div class="col-12"><label class="form-label">Card number</label>
+                  <input class="form-control" name="card_number" inputmode="numeric" placeholder="4242 4242 4242 4242" data-card-number required></div>
+                <div class="col-12"><label class="form-label">Name on card</label>
+                  <input class="form-control" name="card_name" placeholder="As printed on card" data-card-name required></div>
+                <div class="col-6"><label class="form-label">Expiry</label>
+                  <input class="form-control" name="card_expiry" placeholder="MM/YY" data-card-exp required></div>
+                <div class="col-6"><label class="form-label">CVC</label>
+                  <input class="form-control" name="card_cvc" inputmode="numeric" maxlength="4" placeholder="123" required></div>
+              </div>
+              <button class="btn btn-saffron btn-lg w-100 mt-3" data-pay-btn>Pay {{ order.grand_total|money }}</button>
+              <details class="test-help mt-3"><summary>Test card numbers</summary>
+                <ul class="small mb-0"><li><code>4242 4242 4242 4242</code> — succeeds (any future expiry, any CVC)</li>
+                  <li><code>5555 5555 5555 4444</code> — Mastercard, succeeds</li>
+                  <li><code>4000 0000 0000 0002</code> — declined</li>
+                  <li><code>4000 0000 0000 9995</code> — insufficient funds</li></ul></details>
+            </form>
+          </div>
+          <div class="tab-pane fade" id="payUpi">
+            <form method="post" data-pay-form>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="nonce" value="{{ nonce }}">
+              <input type="hidden" name="method" value="upi">
+              <label class="form-label">UPI ID</label>
+              <input class="form-control form-control-lg" name="upi_id" placeholder="yourname@okbank" required>
+              <p class="small text-muted mt-2">Test IDs: <code>success@upi</code> approves, <code>failure@upi</code> declines.</p>
+              <button class="btn btn-saffron btn-lg w-100" data-pay-btn>Request {{ order.grand_total|money }} via UPI</button>
+            </form>
+          </div>
+          {% if cod %}
+          <div class="tab-pane fade" id="payCod">
+            <form method="post" data-pay-form>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="nonce" value="{{ nonce }}">
+              <input type="hidden" name="method" value="cod">
+              <p>Pay <b>{{ order.grand_total|money }}</b> in cash or card when your order arrives. Please keep exact change handy.</p>
+              <button class="btn btn-maroon btn-lg w-100" data-pay-btn>Place Cash on Delivery order</button>
+            </form>
+          </div>
+          {% endif %}
+        </div>
+        <p class="small text-muted mt-3 mb-0"><i class="bi bi-lock"></i> Card details are sent only to the payment gateway. We store just the card brand and last four digits — never the full number or CVC.</p>
+      </div>
+    </div>
+    <div class="col-lg-5">
+      <div class="panel summary-panel">
+        <h5 class="section-mini">Order {{ order.order_number }}</h5>
+        <ul class="summary-items">
+          {% for i in order.items %}<li><img src="{{ url_for('static', filename=i.product.image_url) }}" alt=""><span>{{ i.product_name }} <small>× {{ i.quantity }}</small></span><b>{{ (i.unit_price * i.quantity)|money }}</b></li>{% endfor %}
+        </ul>
+        <dl class="totals">
+          <div><dt>Subtotal</dt><dd>{{ order.subtotal|money }}</dd></div>
+          {% if order.discount > 0 %}<div class="discount"><dt>Discount</dt><dd>− {{ order.discount|money }}</dd></div>{% endif %}
+          <div><dt>{{ config.TAX_LABEL }}</dt><dd>{{ order.tax_amount|money }}</dd></div>
+          <div><dt>Delivery</dt><dd>{{ order.delivery_charge|money if order.delivery_charge > 0 else 'FREE' }}</dd></div>
+          <div class="grand"><dt>Total payable</dt><dd>{{ order.grand_total|money }}</dd></div>
+        </dl>
+        <div class="small mt-3"><b>Delivering to</b><br>{{ order.customer_name }} · {{ order.customer_phone }}<br>{{ order.shipping_address }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

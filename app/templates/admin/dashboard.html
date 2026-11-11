@@ -1,0 +1,117 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import status_badge, pay_badge with context %}
+{% block title %}Dashboard{% endblock %}
+{% block heading %}Namaste, {{ current_user.name.split()[0] }}{% endblock %}
+{% block subheading %}<p class="admin-sub">Here's how the shop is doing today, {{ today.day.strftime('%A %d %B') }}.</p>{% endblock %}
+{% block content %}
+
+{% if nearest %}
+<section class="expiry-ribbon mb-4">
+  <div class="er-head"><i class="bi bi-hourglass-split"></i><b>Nearest expiry dates</b><a href="{{ url_for('admin.expiry') }}">Open expiry tracker →</a></div>
+  <div class="er-list">
+    {% for b in nearest %}{% set lv = expiry_level(b.expiration_date) %}
+      <a class="er-item exp-{{ lv[2] }}" href="{{ url_for('admin.product_stock', pid=b.product_id) }}">
+        <span class="er-days">{% if lv[0] == 'expired' %}<i class="bi bi-x-octagon"></i>{% elif b.days_left == 0 %}<small>today</small>{% else %}{{ b.days_left }}<small>d</small>{% endif %}</span>
+        <span><b>{{ b.product.name }}</b><small>{{ b.batch_number }} · {{ b.quantity_available }} left · {{ b.expiration_date.strftime('%d %b') }}</small></span>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<div class="stat-grid mb-4">
+  {% set c = cards %}
+  {% for icon, label, value, tone, link in [
+      ('bi-box2-heart','Total products', c.total_products, 'saffron', url_for('admin.products')),
+      ('bi-boxes','Available stock', '{:,}'.format(c.total_stock) ~ ' units', 'gold', url_for('admin.inventory')),
+      ('bi-receipt','Total orders', '{:,}'.format(c.total_orders), 'maroon', url_for('admin.orders')),
+      ('bi-calendar-day',"Today's orders", c.today_orders, 'teal', url_for('admin.revenue')),
+      ('bi-currency-dollar',"Today's revenue", c.today_revenue|money, 'green', url_for('admin.revenue')),
+      ('bi-graph-up-arrow','Monthly revenue', c.month_revenue|money, 'blue', url_for('admin.reports', kind='sales', period='daily')),
+      ('bi-people','Customers', c.total_customers, 'plum', url_for('admin.customers')),
+      ('bi-exclamation-triangle','Low stock', c.low_stock, 'orange', url_for('admin.inventory')),
+      ('bi-hourglass-bottom','Expiring ≤ 7 days', c.expiring ~ (' · ' ~ c.expired ~ ' expired' if c.expired else ''), 'red', url_for('admin.expiry')),
+  ] %}
+  <a class="stat-card tone-{{ tone }}" href="{{ link }}">
+    <span class="stat-icon"><i class="bi {{ icon }}"></i></span>
+    <span class="stat-body"><small>{{ label }}</small><b>{{ value }}</b></span>
+  </a>
+  {% endfor %}
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-xl-8">
+    <div class="panel">
+      <div class="panel-head">
+        <h5>Sales performance</h5>
+        <form class="range-form" id="rangeForm">
+          <input type="date" name="start" value="{{ start }}" class="form-control form-control-sm">
+          <span>to</span>
+          <input type="date" name="end" value="{{ end }}" class="form-control form-control-sm">
+          <div class="btn-group btn-group-sm">
+            <button type="button" class="btn btn-outline-maroon" data-days="7">7d</button>
+            <button type="button" class="btn btn-outline-maroon" data-days="30">30d</button>
+            <button type="button" class="btn btn-outline-maroon" data-days="90">90d</button>
+          </div>
+          <button class="btn btn-maroon btn-sm">Apply</button>
+        </form>
+      </div>
+      <div class="range-summary" id="rangeSummary"></div>
+      <ul class="nav chart-tabs" id="trendTabs">
+        <li><button class="active" data-trend="daily">Daily</button></li>
+        <li><button data-trend="weekly">Weekly</button></li>
+        <li><button data-trend="monthly">Monthly</button></li>
+        <li><button data-trend="yearly">Yearly</button></li>
+      </ul>
+      <div class="chart-box tall"><canvas id="trendChart"></canvas></div>
+    </div>
+  </div>
+  <div class="col-xl-4">
+    <div class="panel h-100 today-panel">
+      <div class="panel-head"><h5>Today at the counter</h5><a href="{{ url_for('admin.revenue') }}" class="small">Details →</a></div>
+      <dl class="kv">
+        <div><dt>Orders received</dt><dd>{{ today.orders_received }}</dd></div>
+        <div><dt>Successful payments</dt><dd>{{ today.successful_payments }}</dd></div>
+        <div><dt>Collected</dt><dd>{{ today.collected|money }}</dd></div>
+        <div><dt>Taxes</dt><dd>{{ today.taxes|money }}</dd></div>
+        <div><dt>Refunds ({{ today.refund_count }})</dt><dd class="text-danger">− {{ today.refunds|money }}</dd></div>
+        <div><dt>Cancellations</dt><dd>{{ today.cancellations }}</dd></div>
+        <div class="net"><dt>Net revenue</dt><dd>{{ today.net_revenue|money }}</dd></div>
+        <div class="cod"><dt><i class="bi bi-cash-coin"></i> Cash on Delivery</dt><dd>{{ today.cod_orders }} orders · {{ today.cod_value|money }}</dd></div>
+      </dl>
+      {% if low_stock %}
+      <h6 class="section-mini mt-3">Running low</h6>
+      {% for p, q in low_stock %}<div class="low-row"><span>{{ p.name }}</span><span class="status-pill {{ 's-red' if q == 0 else 's-orange' }}">{{ q }} left</span></div>{% endfor %}
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-6"><div class="panel"><div class="panel-head"><h5>Best-selling sweets</h5></div><div class="chart-box"><canvas id="sweetsChart"></canvas></div></div></div>
+  <div class="col-lg-6"><div class="panel"><div class="panel-head"><h5>Best-selling food items</h5></div><div class="chart-box"><canvas id="foodChart"></canvas></div></div></div>
+  <div class="col-lg-6"><div class="panel"><div class="panel-head"><h5>Sales by category</h5></div><div class="chart-box"><canvas id="categoryChart"></canvas></div></div></div>
+  <div class="col-lg-6"><div class="panel"><div class="panel-head"><h5>Payment methods</h5></div><div class="chart-box"><canvas id="paymentChart"></canvas></div></div></div>
+</div>
+
+<div class="panel p-0">
+  <div class="panel-head px-3 pt-3"><h5>Latest orders</h5><a href="{{ url_for('admin.orders') }}" class="small">All orders →</a></div>
+  <div class="table-responsive">
+  <table class="table table-elegant mb-0">
+    <thead><tr><th>Order</th><th>Customer</th><th>Placed</th><th class="text-end">Total</th><th>Payment</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for o in recent %}
+      <tr onclick="location.href='{{ url_for('admin.order_detail', number=o.order_number) }}'" class="clickable">
+        <td><b>{{ o.order_number }}</b></td><td>{{ o.customer_name }}</td><td>{{ o.created_at|dt }}</td>
+        <td class="text-end">{{ o.grand_total|money }}</td><td>{{ o.payment_method_label }} {{ pay_badge(o.payment_status) }}</td><td>{{ status_badge(o.status) }}</td>
+      </tr>
+    {% else %}<tr><td colspan="6" class="text-center text-muted py-4">No orders yet.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>window.CHART_URL = "{{ url_for('admin.api_charts') }}"; window.CURRENCY = "{{ currency_symbol }}";</script>
+<script src="{{ url_for('static', filename='js/admin-charts.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "emails/_layout.html" %}
+{% block badge %}{{ 'Credit Note' if cancellation and cancellation.credit_note_number else 'Cancellation' }}{% endblock %}
+{% block body %}
+<p style="font:20px Georgia,serif;color:#7B1E2B;margin:8px 0 6px;">Your order has been cancelled</p>
+<p style="margin-top:0;">Hello {{ order.customer_name.split()[0] }}, this confirms the cancellation of order <b>{{ order.order_number }}</b>.</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FFF8EC;border:1px solid #D4A017;font:13px Arial,sans-serif;margin:12px 0;">
+  {% for label, value in [
+    ('Customer', order.customer_name),
+    ('Order ID', order.order_number),
+    ('Order date', order.created_at|dt),
+    ('Cancellation date', cancellation.created_at|dt if cancellation else '—'),
+    ('Original order amount', order.grand_total|money),
+    ('Refund amount', cancellation.refund_amount|money if cancellation else '—'),
+    ('Refund status', (refund.status|title ~ (' · ref ' ~ refund.gateway_refund_id if refund.gateway_refund_id else '')) if refund else 'Not applicable (nothing was charged)'),
+    ('Credit note', cancellation.credit_note_number if cancellation and cancellation.credit_note_number else '—'),
+    ('Reason', cancellation.reason if cancellation and cancellation.reason else 'Not provided'),
+  ] %}
+  <tr><td style="padding:8px 12px;border-bottom:1px solid #EAD8B8;color:#7B1E2B;font-weight:bold;width:42%;">{{ label }}</td><td style="padding:8px 12px;border-bottom:1px solid #EAD8B8;">{{ value }}</td></tr>
+  {% endfor %}
+</table>
+<p style="font:bold 11px Arial;color:#7B1E2B;letter-spacing:1px;margin-bottom:4px;">CANCELLED ITEMS</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #D4A017;border-collapse:collapse;font:13px Arial,sans-serif;">
+  <tr style="background:#F28C28;color:#fff;"><th align="left" style="padding:8px;">Item</th><th align="right" style="padding:8px;">Qty</th><th align="right" style="padding:8px;">Total</th></tr>
+  {% for i in order.items %}<tr><td style="padding:8px;border-bottom:1px solid #EAD8B8;">{{ i.product_name }}</td><td align="right" style="padding:8px;border-bottom:1px solid #EAD8B8;">{{ i.quantity }}</td><td align="right" style="padding:8px;border-bottom:1px solid #EAD8B8;">{{ i.line_total|money }}</td></tr>{% endfor %}
+</table>
+{% if refund %}<p style="margin-top:16px;">Refunds to cards and UPI usually appear within 5–7 business days, depending on your bank.{% if cancellation.credit_note_number %} Your credit note is attached.{% endif %}</p>{% endif %}
+<p style="margin-top:16px;">We hope to sweeten your day again soon. If you didn't request this cancellation, please contact us at {{ store.support }}.</p>
+{% endblock %}

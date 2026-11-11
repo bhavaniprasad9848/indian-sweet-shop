@@ -1,0 +1,86 @@
+{% extends "account/_layout.html" %}
+{% from "_macros.html" import status_badge, pay_badge with context %}
+{% block title %}Order {{ order.order_number }}{% endblock %}
+{% block heading %}Order {{ order.order_number }}{% endblock %}
+{% block account_body %}
+<div class="panel mb-4">
+  <div class="d-flex justify-content-between flex-wrap gap-2 align-items-center">
+    <div><small class="text-muted">Placed {{ order.created_at|dt }}</small><div class="mt-1">{{ status_badge(order.status) }} {{ pay_badge(order.payment_status) }}</div></div>
+    <div class="d-flex gap-2 flex-wrap">
+      {% if order.invoice %}<a class="btn btn-outline-maroon btn-sm" target="_blank" href="{{ url_for('account.invoice_pdf', number=order.order_number) }}"><i class="bi bi-file-earmark-pdf"></i> Invoice</a>{% endif %}
+      {% if order.cancellation and order.cancellation.credit_note_number %}<a class="btn btn-outline-maroon btn-sm" target="_blank" href="{{ url_for('account.credit_note_pdf', number=order.order_number) }}"><i class="bi bi-file-earmark-minus"></i> Credit note</a>{% endif %}
+      {% if cancellable %}<button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#cancelModal"><i class="bi bi-x-circle"></i> Cancel order</button>{% endif %}
+    </div>
+  </div>
+
+  {% if order.status in ('cancelled', 'refunded') %}
+    <div class="alert alert-danger mt-3 mb-0">
+      <b>Cancelled</b> {{ order.cancelled_at|dt }}{% if order.cancellation and order.cancellation.reason %} — “{{ order.cancellation.reason }}”{% endif %}.
+      {% if order.cancellation and order.cancellation.refund_amount > 0 %}Refund of <b>{{ order.cancellation.refund_amount|money }}</b> {{ order.cancellation.refund.status if order.cancellation.refund else '' }} to your original payment method.{% endif %}
+    </div>
+  {% elif order.status != 'pending' %}
+    <ol class="tracker mt-4">
+      {% set cur = steps.index(order.status) if order.status in steps else 0 %}
+      {% for s in steps %}
+        <li class="{{ 'done' if loop.index0 < cur else 'current' if loop.index0 == cur }}">
+          <span class="dot"><i class="bi {{ ['bi-check2-circle','bi-fire','bi-bag-check','bi-truck','bi-house-heart'][loop.index0] }}"></i></span>
+          <b>{{ status_labels[s] }}</b><small>{{ reached[s]|dt('%d %b, %I:%M %p') if s in reached else '' }}</small>
+        </li>
+      {% endfor %}
+    </ol>
+  {% endif %}
+</div>
+
+<div class="row g-4">
+  <div class="col-md-7">
+    <div class="panel p-0">
+      <table class="table table-elegant mb-0">
+        <thead><tr><th>Item</th><th class="text-end">Qty</th><th class="text-end">Price</th><th class="text-end">Tax</th><th class="text-end">Total</th></tr></thead>
+        <tbody>
+          {% for i in order.items %}<tr><td>{{ i.product_name }}<br><small class="text-muted">{{ i.unit_label }}</small></td><td class="text-end">{{ i.quantity }}</td><td class="text-end">{{ i.unit_price|money }}</td><td class="text-end">{{ i.tax_amount|money }}</td><td class="text-end">{{ i.line_total|money }}</td></tr>{% endfor %}
+        </tbody>
+      </table>
+      <div class="p-3">
+        <dl class="totals mb-0">
+          <div><dt>Subtotal</dt><dd>{{ order.subtotal|money }}</dd></div>
+          {% if order.discount > 0 %}<div class="discount"><dt>Discount</dt><dd>− {{ order.discount|money }}</dd></div>{% endif %}
+          <div><dt>{{ config.TAX_LABEL }}</dt><dd>{{ order.tax_amount|money }}</dd></div>
+          <div><dt>Delivery</dt><dd>{{ order.delivery_charge|money if order.delivery_charge > 0 else 'FREE' }}</dd></div>
+          <div class="grand"><dt>Grand total</dt><dd>{{ order.grand_total|money }}</dd></div>
+        </dl>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-5">
+    <div class="panel">
+      <h6 class="section-mini">Delivery</h6>
+      <p>{{ order.customer_name }}<br>{{ order.customer_phone }}<br>{{ order.shipping_address }}</p>
+      {% if order.delivery_instructions %}<p class="small text-muted">“{{ order.delivery_instructions }}”</p>{% endif %}
+      <h6 class="section-mini mt-3">Payment</h6>
+      {% set pay = order.successful_payment %}
+      <p class="mb-0">{{ order.payment_method_label }}{% if pay and pay.card_last4 %} · {{ pay.card_brand }} •••• {{ pay.card_last4 }}{% endif %}<br>
+        {% if pay %}<small class="text-muted">Txn {{ pay.transaction_id }}</small>{% endif %}</p>
+    </div>
+  </div>
+</div>
+
+{% if cancellable %}
+<div class="modal fade" id="cancelModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+    <form method="post" action="{{ url_for('account.cancel', number=order.order_number) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-header"><h5 class="modal-title">Cancel {{ order.order_number }}?</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        {% if order.payment_status == 'paid' %}<p>You'll receive a full refund of <b>{{ order.grand_total|money }}</b> to your original payment method.</p>{% else %}<p>Your Cash on Delivery order will be cancelled — nothing has been charged.</p>{% endif %}
+        <label class="form-label">Reason (optional)</label>
+        <select class="form-select mb-2" onchange="this.nextElementSibling.value=this.value">
+          <option value="">Choose a reason…</option><option>Ordered by mistake</option><option>Delivery time too late</option><option>Want to change items</option><option>Found a better price</option>
+        </select>
+        <textarea class="form-control" name="reason" rows="2" maxlength="300"></textarea>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-link" data-bs-dismiss="modal">Keep order</button><button class="btn btn-danger">Cancel order</button></div>
+    </form>
+  </div></div>
+</div>
+{% endif %}
+{% endblock %}

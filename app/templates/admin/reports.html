@@ -1,0 +1,38 @@
+{% extends "admin/base.html" %}
+{% block title %}Reports{% endblock %}
+{% block heading %}Reports &amp; analytics{% endblock %}
+{% block content %}
+<div class="report-tabs mb-3">
+  {% for k, l in reports.items() %}
+    {% set args = request.args.to_dict() %}{% set _ = args.update({'kind': k}) %}{% set _ = args.pop('export', None) %}
+    <a href="{{ url_for('admin.reports', **args) }}" class="{{ 'active' if report.kind == k }}">{{ l }}</a>
+  {% endfor %}
+</div>
+<form class="toolbar mb-3">
+  <input type="hidden" name="kind" value="{{ report.kind }}">
+  {% if report.kind == 'sales' %}
+  <select class="form-select w-auto" name="period">{% for k, l in periods.items() %}<option value="{{ k }}" {% if report.period == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+  {% endif %}
+  {% if report.kind not in ('inventory', 'expiry') %}
+  <input type="date" class="form-control w-auto" name="start" value="{{ report.start }}">
+  <input type="date" class="form-control w-auto" name="end" value="{{ report.end }}">
+  {% endif %}
+  <button class="btn btn-maroon">Run report</button>
+  <div class="ms-auto d-flex gap-2">
+    {% set args = request.args.to_dict() %}{% set _ = args.update({'kind': report.kind, 'start': report.start, 'end': report.end, 'period': report.period}) %}
+    {% set _ = args.update({'export': 'pdf'}) %}<a class="btn btn-outline-maroon" href="{{ url_for('admin.reports', **args) }}"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+    {% set _ = args.update({'export': 'xlsx'}) %}<a class="btn btn-outline-maroon" href="{{ url_for('admin.reports', **args) }}"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+  </div>
+</form>
+<div class="panel p-0">
+  <div class="panel-head px-3 pt-3"><h5>{{ report.title }}</h5><small class="text-muted">{% if report.kind not in ('inventory','expiry') %}{{ report.start|d }} – {{ report.end|d }} · {% endif %}{{ report.rows|length }} rows</small></div>
+  <div class="table-responsive"><table class="table table-elegant table-sm mb-0">
+    <thead><tr>{% for c in report.columns %}<th>{{ c }}</th>{% endfor %}</tr></thead>
+    <tbody>
+      {% for r in report.rows %}<tr>{% for v in r %}<td>{{ fmt_cell(report.columns[loop.index0], v) }}</td>{% endfor %}</tr>
+      {% else %}<tr><td colspan="{{ report.columns|length }}" class="text-center text-muted py-4">No data for this period.</td></tr>{% endfor %}
+    </tbody>
+    {% if report.totals %}<tfoot><tr>{% for v in report.totals %}<th>{{ fmt_cell(report.columns[loop.index0], v) }}</th>{% endfor %}</tr></tfoot>{% endif %}
+  </table></div>
+</div>
+{% endblock %}

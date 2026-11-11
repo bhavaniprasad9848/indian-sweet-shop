@@ -1,0 +1,29 @@
+{% extends "account/_layout.html" %}
+{% block title %}Addresses{% endblock %}
+{% block heading %}Saved addresses{% endblock %}
+{% block account_body %}
+<div class="row g-3 mb-4">
+  {% for a in addresses %}
+  <div class="col-md-6">
+    <div class="address-card {{ 'is-default' if a.is_default }}">
+      <div class="d-flex justify-content-between"><b>{{ a.label }}</b>{% if a.is_default %}<span class="status-pill s-saffron">Default</span>{% endif %}</div>
+      <p class="mb-2">{{ a.full_name }} · {{ a.phone }}<br>{{ a.one_line() }}</p>
+      <div class="d-flex gap-2">
+        <button class="btn btn-sm btn-outline-maroon" data-bs-toggle="collapse" data-bs-target="#edit{{ a.id }}">Edit</button>
+        {% if not a.is_default %}
+        <form method="post" action="{{ url_for('account.default_address', addr_id=a.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-link">Make default</button></form>
+        {% endif %}
+        <form method="post" action="{{ url_for('account.delete_address', addr_id=a.id) }}" onsubmit="return confirm('Delete this address?')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-link text-danger">Delete</button></form>
+      </div>
+      <div class="collapse mt-3" id="edit{{ a.id }}">{% with a=a %}{% include "account/_address_form.html" %}{% endwith %}</div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12"><div class="empty-state small"><p>No saved addresses yet.</p></div></div>
+  {% endfor %}
+</div>
+<div class="panel">
+  <h5 class="section-mini">Add a new address</h5>
+  {% with a=None %}{% include "account/_address_form.html" %}{% endwith %}
+</div>
+{% endblock %}

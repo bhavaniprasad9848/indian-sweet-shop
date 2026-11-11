@@ -1,0 +1,62 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import status_badge, pay_badge with context %}
+{% block title %}Daily revenue{% endblock %}
+{% block heading %}Daily revenue{% endblock %}
+{% block subheading %}<p class="admin-sub">All figures computed from orders, payments and refunds recorded on {{ day.strftime('%A %d %B %Y') }}.</p>{% endblock %}
+{% block top_actions %}
+<form class="d-flex gap-1 align-items-center">
+  <a class="btn btn-sm btn-outline-maroon" href="{{ url_for('admin.revenue', day=prev) }}"><i class="bi bi-chevron-left"></i></a>
+  <input type="date" name="day" value="{{ day }}" class="form-control form-control-sm" onchange="this.form.submit()">
+  <a class="btn btn-sm btn-outline-maroon" href="{{ url_for('admin.revenue', day=next) }}"><i class="bi bi-chevron-right"></i></a>
+</form>
+{% endblock %}
+{% block content %}
+<div class="stat-grid mb-4">
+  {% for icon, label, value, tone in [
+    ('bi-receipt','Orders received', r.orders_received, 'maroon'),
+    ('bi-credit-card','Successful payments', r.successful_payments, 'teal'),
+    ('bi-wallet2','Revenue collected', r.collected|money, 'green'),
+    ('bi-bank','Taxes collected', r.taxes|money, 'gold'),
+    ('bi-arrow-counterclockwise','Refunds', r.refunds|money ~ ' (' ~ r.refund_count ~ ')', 'red'),
+    ('bi-x-circle','Cancellations', r.cancellations, 'orange'),
+    ('bi-graph-up','Net revenue', r.net_revenue|money, 'blue'),
+    ('bi-cash-coin','COD orders', r.cod_orders ~ ' · ' ~ r.cod_value|money, 'plum'),
+  ] %}
+  <div class="stat-card tone-{{ tone }}"><span class="stat-icon"><i class="bi {{ icon }}"></i></span><span class="stat-body"><small>{{ label }}</small><b>{{ value }}</b></span></div>
+  {% endfor %}
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-md-6"><div class="panel"><h5 class="section-mini">Collections breakdown</h5>
+    <dl class="kv">
+      <div><dt>Online payments (card / UPI / Stripe)</dt><dd>{{ r.online_collected|money }}</dd></div>
+      <div><dt>Cash collected on delivery</dt><dd>{{ r.cod_collected|money }}</dd></div>
+      <div><dt>Refunds issued</dt><dd class="text-danger">− {{ r.refunds|money }}</dd></div>
+      <div class="net"><dt>Net revenue</dt><dd>{{ r.net_revenue|money }}</dd></div>
+    </dl></div></div>
+  <div class="col-md-6"><div class="panel"><h5 class="section-mini">Order book</h5>
+    <dl class="kv">
+      <div><dt>Gross sales (live orders confirmed today)</dt><dd>{{ r.gross_sales|money }}</dd></div>
+      <div><dt>Of which tax</dt><dd>{{ r.taxes|money }}</dd></div>
+      <div><dt>COD value booked today</dt><dd>{{ r.cod_value|money }}</dd></div>
+      <div><dt>COD still to be collected (today's orders)</dt><dd>{{ r.cod_pending|money }}</dd></div>
+    </dl></div></div>
+</div>
+
+<div class="panel p-0">
+  <div class="panel-head px-3 pt-3"><h5>Orders confirmed on this day</h5>
+    <a class="small" href="{{ url_for('admin.reports', kind='payments', start=day, end=day) }}">Payment report →</a></div>
+  <div class="table-responsive"><table class="table table-elegant mb-0">
+    <thead><tr><th>Time</th><th>Order</th><th>Customer</th><th>Method</th><th class="text-end">Tax</th><th class="text-end">Total</th><th>Payment</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for o in orders %}
+      <tr class="clickable" onclick="location.href='{{ url_for('admin.order_detail', number=o.order_number) }}'">
+        <td>{{ o.confirmed_at|dt('%I:%M %p') }}</td><td><b>{{ o.order_number }}</b></td><td>{{ o.customer_name }}</td>
+        <td>{{ o.payment_method_label }}</td><td class="text-end">{{ o.tax_amount|money }}</td><td class="text-end">{{ o.grand_total|money }}</td>
+        <td>{{ pay_badge(o.payment_status) }}</td><td>{{ status_badge(o.status) }}</td>
+      </tr>
+    {% else %}<tr><td colspan="8" class="text-center text-muted py-4">No orders on this day.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</div>
+{% endblock %}

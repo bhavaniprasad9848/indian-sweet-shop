@@ -1,0 +1,26 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import pagination with context %}
+{% block title %}Email log{% endblock %}
+{% block heading %}Email log{% endblock %}
+{% block subheading %}<p class="admin-sub">{% if smtp %}Delivering through SMTP ({{ config.MAIL_SERVER }}).{% else %}SMTP is not configured — emails are written to <code>instance/outbox/</code> as .eml files and shown here.{% endif %}</p>{% endblock %}
+{% block content %}
+<div class="chip-filter mb-3">
+  {% for k, l in [('', 'All'), ('otp', 'OTP'), ('order_confirmation', 'Order confirmations'), ('cancellation', 'Cancellations'), ('status', 'Status updates')] %}
+    <a href="{{ url_for('admin.emails', category=k) }}" class="{{ 'active' if cat == k }}">{{ l }}</a>
+  {% endfor %}
+</div>
+<div class="panel p-0"><div class="table-responsive">
+<table class="table table-elegant mb-0">
+  <thead><tr><th>When</th><th>To</th><th>Subject</th><th>Type</th><th>Attachment</th><th>Status</th></tr></thead>
+  <tbody>
+  {% for e in pag.items %}
+    <tr class="clickable" onclick="location.href='{{ url_for('admin.email_view', eid=e.id) }}'">
+      <td>{{ e.created_at|dt }}</td><td>{{ e.recipient }}</td><td>{{ e.subject if e.category != 'otp' else '•••••• is your verification code' }}</td><td>{{ e.category|replace('_',' ') }}</td>
+      <td>{% if e.attachment_name %}<i class="bi bi-paperclip"></i> {{ e.attachment_name }}{% endif %}</td>
+      <td><span class="status-pill {{ 's-green' if e.status == 'sent' else 's-gold' if e.status == 'outbox' else 's-red' }}">{{ e.status }}</span>{% if e.error %}<br><small class="text-danger">{{ e.error[:80] }}</small>{% endif %}</td>
+    </tr>
+  {% else %}<tr><td colspan="6" class="text-center text-muted py-4">No emails yet.</td></tr>{% endfor %}
+  </tbody>
+</table></div></div>
+{{ pagination(pag, 'admin.emails') }}
+{% endblock %}

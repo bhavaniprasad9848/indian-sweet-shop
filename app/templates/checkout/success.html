@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge, pay_badge with context %}
+{% block title %}Order confirmed{% endblock %}
+{% block content %}
+<div class="container section pt-4">
+  {% set step = 4 %}{% include "checkout/_steps.html" %}
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="panel success-panel text-center">
+        <div class="success-burst"><i class="bi bi-check-lg"></i></div>
+        {% if order.status in ('cancelled', 'refunded') %}
+          <h1 class="h2">Order {{ order.status_label|lower }}</h1>
+          <p class="text-muted">This order was cancelled. Any payment has been refunded.</p>
+        {% else %}
+          <h1 class="h2">धन्यवाद! Your order is confirmed</h1>
+          <p class="text-muted">We've emailed your invoice to <b>{{ order.customer_email }}</b>. Our halwais are getting started.</p>
+        {% endif %}
+        <div class="success-grid">
+          <div><small>Order ID</small><b>{{ order.order_number }}</b></div>
+          <div><small>Invoice</small><b>{{ order.invoice.invoice_number if order.invoice else '—' }}</b></div>
+          <div><small>Total</small><b>{{ order.grand_total|money }}</b></div>
+          <div><small>Payment</small><b>{{ order.payment_method_label }}</b> {{ pay_badge(order.payment_status) }}</div>
+        </div>
+        {% if payment %}<p class="small text-muted">Transaction {{ payment.transaction_id }}{% if payment.card_last4 %} · {{ payment.card_brand }} •••• {{ payment.card_last4 }}{% endif %}</p>{% endif %}
+        <div class="d-flex justify-content-center gap-2 flex-wrap mt-3">
+          <a class="btn btn-saffron" href="{{ url_for('account.order_detail', number=order.order_number) }}"><i class="bi bi-truck"></i> Track order</a>
+          {% if order.invoice %}<a class="btn btn-outline-maroon" href="{{ url_for('account.invoice_pdf', number=order.order_number) }}" target="_blank"><i class="bi bi-file-earmark-pdf"></i> View invoice</a>{% endif %}
+          <a class="btn btn-link" href="{{ url_for('main.shop') }}">Keep shopping</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

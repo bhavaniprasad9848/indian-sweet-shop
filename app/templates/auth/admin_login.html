@@ -1,0 +1,24 @@
+{% extends "auth/_layout.html" %}
+{% block title %}Admin sign in{% endblock %}
+{% block auth_variant %}auth-admin{% endblock %}
+{% block side_title %}Shop Office{% endblock %}
+{% block side_text %}Inventory, expiry alerts, orders and revenue — protected by password and email OTP.{% endblock %}
+{% block auth_body %}
+<span class="eyebrow"><i class="bi bi-shield-lock"></i> Admin portal</span>
+<h1 class="auth-title">Staff sign in</h1>
+<p class="text-muted">Two-step verification is required for every admin session.</p>
+<form method="post" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="form-floating mb-3">
+    <input type="email" class="form-control" id="email" name="email" placeholder="admin@example.com" value="{{ email }}" required autofocus>
+    <label for="email">Admin email</label>
+  </div>
+  <div class="form-floating mb-3 pw-wrap">
+    <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
+    <label for="password">Password</label>
+    <button type="button" class="pw-toggle" data-toggle-pw="#password" aria-label="Show password"><i class="bi bi-eye"></i></button>
+  </div>
+  <button class="btn btn-maroon btn-lg w-100">Send verification code</button>
+</form>
+<p class="mt-4 text-center small"><a href="{{ url_for('auth.login') }}">← Customer sign in</a></p>
+{% endblock %}

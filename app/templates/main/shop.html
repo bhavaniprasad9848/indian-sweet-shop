@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% from "_macros.html" import product_card with context %}
+{% block title %}Shop{% endblock %}
+{% block content %}
+<section class="page-banner">
+  <div class="container">
+    <span class="eyebrow light">{{ 'मिठाई' if f.kind == 'sweet' else 'नमकीन' if f.kind == 'food' else 'दुकान' }}</span>
+    <h1>{% if f.q %}Results for “{{ f.q }}”{% elif f.kind == 'sweet' %}Traditional Sweets{% elif f.kind == 'food' %}Snacks &amp; Meals{% else %}The Full Counter{% endif %}</h1>
+    <p>{{ items|length }} item{{ '' if items|length == 1 else 's' }} · stock and best-before dates update live from our kitchen</p>
+  </div>
+</section>
+
+<div class="container section pt-4">
+  <div class="row g-4">
+    <aside class="col-lg-3">
+      <form class="filter-panel" method="get" id="filterForm">
+        <label class="form-label">Search</label>
+        <input class="form-control mb-3" name="q" value="{{ f.q }}" placeholder="Name or ingredient">
+
+        <label class="form-label">Type</label>
+        <div class="btn-group w-100 mb-3" role="group">
+          <input type="radio" class="btn-check" name="kind" id="k0" value="" {% if not f.kind %}checked{% endif %}><label class="btn btn-toggle" for="k0">All</label>
+          <input type="radio" class="btn-check" name="kind" id="k1" value="sweet" {% if f.kind == 'sweet' %}checked{% endif %}><label class="btn btn-toggle" for="k1">Sweets</label>
+          <input type="radio" class="btn-check" name="kind" id="k2" value="food" {% if f.kind == 'food' %}checked{% endif %}><label class="btn btn-toggle" for="k2">Food</label>
+        </div>
+
+        <label class="form-label">Category</label>
+        <select class="form-select mb-3" name="category">
+          <option value="">All categories</option>
+          {% for c in categories %}<option value="{{ c.slug }}" {% if f.category == c.slug %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+        </select>
+
+        <label class="form-label">Sort by</label>
+        <select class="form-select mb-3" name="sort">
+          {% for k, v in sorts.items() %}<option value="{{ k }}" {% if f.sort == k %}selected{% endif %}>{{ v }}</option>{% endfor %}
+        </select>
+
+        <label class="form-label">Max price ({{ currency_symbol }})</label>
+        <input class="form-control mb-3" type="number" min="1" step="1" name="max_price" value="{{ f.max_price|int if f.max_price else '' }}" placeholder="Any">
+
+        <div class="form-check form-switch mb-2">
+          <input class="form-check-input" type="checkbox" role="switch" id="inStock" name="in_stock" value="1" {% if f.in_stock %}checked{% endif %}>
+          <label class="form-check-label" for="inStock">In stock only</label>
+        </div>
+        <div class="form-check form-switch mb-3">
+          <input class="form-check-input" type="checkbox" role="switch" id="vegOnly" name="veg" value="1" {% if f.veg %}checked{% endif %}>
+          <label class="form-check-label" for="vegOnly">Vegetarian only</label>
+        </div>
+        <button class="btn btn-maroon w-100">Apply filters</button>
+        <a href="{{ url_for('main.shop') }}" class="btn btn-link w-100 mt-1">Reset</a>
+      </form>
+    </aside>
+    <div class="col-lg-9">
+      {% if items %}
+        <div class="product-grid grid-3">{% for item in items %}{{ product_card(item) }}{% endfor %}</div>
+      {% else %}
+        <div class="empty-state">
+          <img src="{{ url_for('static', filename='images/empty-thali.svg') }}" alt="" width="140">
+          <h3>Nothing matches yet</h3>
+          <p>Try a different search or clear the filters.</p>
+          <a href="{{ url_for('main.shop') }}" class="btn btn-saffron">Show everything</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  document.querySelectorAll('#filterForm select, #filterForm input[type=radio], #filterForm input[type=checkbox]')
+    .forEach(el => el.addEventListener('change', () => el.form.submit()));
+</script>
+{% endblock %}

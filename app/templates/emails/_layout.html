@@ -1,0 +1,29 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>{{ store.name }}</title></head>
+<body style="margin:0;padding:0;background:#F6EBDD;font-family:Georgia,'Times New Roman',serif;color:#3A2418;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F6EBDD;padding:24px 0;">
+<tr><td align="center">
+<table role="presentation" width="640" cellpadding="0" cellspacing="0" style="max-width:640px;width:100%;background:#FFFDF7;border:2px solid #D4A017;border-radius:6px;overflow:hidden;">
+  <tr><td style="background:#7B1E2B;padding:22px 28px;">
+    <table role="presentation" width="100%"><tr>
+      <td width="58" valign="middle"><div style="width:50px;height:50px;border-radius:50%;background:#D4A017;color:#7B1E2B;font:bold 20px Georgia,serif;line-height:50px;text-align:center;">श्री</div></td>
+      <td valign="middle" style="padding-left:12px;">
+        <div style="font:bold 22px Georgia,serif;color:#FFF8EC;letter-spacing:.3px;">{{ store.name }}</div>
+        <div style="font:italic 13px Georgia,serif;color:#F7D58B;">{{ store.tagline }}</div>
+      </td>
+      <td align="right" valign="middle" style="font:bold 12px Arial,sans-serif;color:#F7D58B;letter-spacing:1.5px;text-transform:uppercase;">{% block badge %}{% endblock %}</td>
+    </tr></table>
+  </td></tr>
+  <tr><td style="height:5px;background:#F28C28;font-size:0;line-height:0;">&nbsp;</td></tr>
+  <tr><td style="padding:6px 28px 0;text-align:center;color:#D4A017;font-size:14px;letter-spacing:6px;">◆ • ◆ • ◆ • ◆ • ◆</td></tr>
+  <tr><td style="padding:16px 28px 26px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.55;color:#3A2418;">
+    {% block body %}{% endblock %}
+  </td></tr>
+  <tr><td style="background:#FFF3DF;border-top:1px solid #EAD8B8;padding:18px 28px;font:12px Arial,sans-serif;color:#8A6E5A;text-align:center;">
+    {{ store.name }} · {{ store.address }}<br>
+    {{ store.phone }} · <a href="mailto:{{ store.support }}" style="color:#7B1E2B;">{{ store.support }}</a>{% if store.gstin %} · GSTIN {{ store.gstin }}{% endif %}<br>
+    <span style="font-size:11px;">We will never ask for your card PIN, password or OTP over phone or email.</span>
+  </td></tr>
+</table>
+</td></tr></table>
+</body></html>

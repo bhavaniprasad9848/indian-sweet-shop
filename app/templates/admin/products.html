@@ -1,0 +1,41 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import veg_mark with context %}
+{% block title %}Products{% endblock %}
+{% block heading %}Products{% endblock %}
+{% block top_actions %}<a href="{{ url_for('admin.product_new') }}" class="btn btn-saffron btn-sm"><i class="bi bi-plus-lg"></i> New product</a>{% endblock %}
+{% block content %}
+<form class="toolbar mb-3">
+  <input class="form-control" name="q" value="{{ q }}" placeholder="Search products or categories">
+  <select class="form-select w-auto" name="show" onchange="this.form.submit()">
+    <option value="">All products</option><option value="inactive" {% if request.args.show == 'inactive' %}selected{% endif %}>Inactive only</option>
+  </select>
+  <button class="btn btn-maroon">Search</button>
+</form>
+<div class="panel p-0"><div class="table-responsive">
+<table class="table table-elegant align-middle mb-0">
+  <thead><tr><th></th><th>Product</th><th>Category</th><th class="text-end">Price</th><th>Pack</th><th class="text-end">Stock</th><th>Nearest expiry</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
+  <tbody>
+  {% for p in products %}{% set st = stocks.get(p.id, 0) %}
+    <tr class="{{ 'row-muted' if not p.is_active }}">
+      <td><img src="{{ url_for('static', filename=p.image_url) }}" class="thumb" alt=""></td>
+      <td><div class="d-flex align-items-center gap-2">{{ veg_mark(p.is_veg) }}<b>{{ p.name }}</b>{% if p.is_featured %}<i class="bi bi-star-fill text-warning" title="Featured"></i>{% endif %}</div>
+        <small class="text-muted">{{ p.ingredients|length }} ingredients · {{ p.shelf_life_days }}d shelf life</small></td>
+      <td>{{ p.category.name }}<br><small class="text-muted">{{ p.category.kind|title }}</small></td>
+      <td class="text-end">{{ p.price|money }}</td>
+      <td>{{ p.unit_label }}</td>
+      <td class="text-end"><span class="status-pill {{ 's-red' if st == 0 else 's-orange' if st <= low else 's-green' }}">{{ st }}</span></td>
+      <td>{% if p.id in nearest %}{% set lv = expiry_level(nearest[p.id]) %}<span class="exp-chip exp-{{ lv[2] }}">{{ nearest[p.id].strftime('%d %b') }} · {{ lv[1] }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+      <td>{{ '<span class="status-pill s-green">Active</span>'|safe if p.is_active else '<span class="status-pill s-muted">Inactive</span>'|safe }}</td>
+      <td class="text-end text-nowrap">
+        <a class="btn btn-sm btn-outline-maroon" href="{{ url_for('admin.product_edit', pid=p.id) }}" title="Edit"><i class="bi bi-pencil"></i></a>
+        <a class="btn btn-sm btn-outline-maroon" href="{{ url_for('admin.product_stock', pid=p.id) }}" title="Stock & batches"><i class="bi bi-boxes"></i></a>
+        <form method="post" action="{{ url_for('admin.product_toggle', pid=p.id) }}" class="d-inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-sm btn-outline-secondary" title="{{ 'Deactivate' if p.is_active else 'Activate' }}"><i class="bi {{ 'bi-eye-slash' if p.is_active else 'bi-eye' }}"></i></button></form>
+        <form method="post" action="{{ url_for('admin.product_delete', pid=p.id) }}" class="d-inline" onsubmit="return confirm('Delete {{ p.name }}? Products with orders are deactivated instead.')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash3"></i></button></form>
+      </td>
+    </tr>
+  {% else %}<tr><td colspan="9" class="text-center py-4 text-muted">No products found.</td></tr>{% endfor %}
+  </tbody>
+</table></div></div>
+{% endblock %}

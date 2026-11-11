@@ -1,0 +1,42 @@
+{% extends "account/_layout.html" %}
+{% from "_macros.html" import status_badge, pay_badge with context %}
+{% block title %}My orders{% endblock %}
+{% block heading %}My orders{% endblock %}
+{% block account_body %}
+{% for d in drafts %}
+<div class="alert alert-warning d-flex justify-content-between align-items-center flex-wrap gap-2">
+  <span><i class="bi bi-hourglass-split"></i> Draft order <b>{{ d.order_number }}</b> ({{ d.grand_total|money }}) is waiting for {{ 'payment' if d.otp_verified else 'OTP verification' }}.</span>
+  <a class="btn btn-sm btn-saffron" href="{{ url_for('checkout.pay' if d.otp_verified else 'checkout.verify', number=d.order_number) }}">Complete order</a>
+</div>
+{% endfor %}
+<div class="chip-filter mb-3">
+  <a href="{{ url_for('account.orders') }}" class="{{ 'active' if not status }}">All</a>
+  {% for s in ['confirmed','preparing','out_for_delivery','delivered','cancelled','refunded'] %}
+    <a href="{{ url_for('account.orders', status=s) }}" class="{{ 'active' if status == s }}">{{ status_labels[s] }}</a>
+  {% endfor %}
+</div>
+{% if orders %}
+<div class="panel p-0">
+  <div class="table-responsive">
+  <table class="table table-elegant mb-0">
+    <thead><tr><th>Order</th><th>Date</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    {% for o in orders %}
+      <tr>
+        <td><b>{{ o.order_number }}</b></td>
+        <td>{{ o.created_at|d }}</td>
+        <td>{{ o.items[:2]|map(attribute='product_name')|join(', ') }}{% if o.items|length > 2 %} +{{ o.items|length - 2 }}{% endif %}</td>
+        <td>{{ o.grand_total|money }}</td>
+        <td>{{ o.payment_method_label }}<br>{{ pay_badge(o.payment_status) }}</td>
+        <td>{{ status_badge(o.status) }}</td>
+        <td><a class="btn btn-sm btn-outline-maroon" href="{{ url_for('account.order_detail', number=o.order_number) }}">View</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% else %}
+<div class="empty-state"><img src="{{ url_for('static', filename='images/empty-thali.svg') }}" alt="" width="120"><h3>No orders yet</h3><a class="btn btn-saffron" href="{{ url_for('main.shop') }}">Start shopping</a></div>
+{% endif %}
+{% endblock %}

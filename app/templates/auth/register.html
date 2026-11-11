@@ -1,0 +1,37 @@
+{% extends "auth/_layout.html" %}
+{% block title %}Create account{% endblock %}
+{% block side_title %}परिवार में स्वागत{% endblock %}
+{% block side_text %}Save addresses, track every order, and get first word on festival boxes.{% endblock %}
+{% block auth_body %}
+<span class="eyebrow">New customer</span>
+<h1 class="auth-title">Create your account</h1>
+<p class="text-muted">We'll send a 6-digit code to verify your email.</p>
+<form method="post" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="form-floating mb-3">
+    <input class="form-control" id="name" name="name" placeholder="Full name" value="{{ form.name or '' }}" required maxlength="120">
+    <label for="name">Full name</label>
+  </div>
+  <div class="row g-3 mb-3">
+    <div class="col-sm-7"><div class="form-floating">
+      <input type="email" class="form-control" id="email" name="email" placeholder="Email" value="{{ form.email or '' }}" required>
+      <label for="email">Email</label></div></div>
+    <div class="col-sm-5"><div class="form-floating">
+      <input type="tel" class="form-control" id="phone" name="phone" placeholder="Phone" value="{{ form.phone or '' }}" required>
+      <label for="phone">Phone</label></div></div>
+  </div>
+  <div class="row g-3 mb-2">
+    <div class="col-sm-6"><div class="form-floating pw-wrap">
+      <input type="password" class="form-control" id="password" name="password" placeholder="Password" required minlength="8" data-pw-meter>
+      <label for="password">Password</label>
+      <button type="button" class="pw-toggle" data-toggle-pw="#password" aria-label="Show password"><i class="bi bi-eye"></i></button></div></div>
+    <div class="col-sm-6"><div class="form-floating">
+      <input type="password" class="form-control" id="confirm_password" name="confirm_password" placeholder="Confirm" required>
+      <label for="confirm_password">Confirm password</label></div></div>
+  </div>
+  <div class="pw-meter mb-3"><span></span></div>
+  <p class="small text-muted">At least 8 characters with a letter and a number.</p>
+  <button class="btn btn-saffron btn-lg w-100">Create account &amp; send code</button>
+</form>
+<p class="mt-4 text-center">Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a></p>
+{% endblock %}

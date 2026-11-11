@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% from "_macros.html" import product_card, divider with context %}
+{% block title %}Fresh Indian sweets &amp; snacks{% endblock %}
+{% block body_class %}page-home{% endblock %}
+{% block content %}
+
+<section class="hero">
+  <div id="festivalCarousel" class="carousel slide carousel-fade" data-bs-ride="carousel" data-bs-interval="6500">
+    <div class="carousel-indicators">
+      <button type="button" data-bs-target="#festivalCarousel" data-bs-slide-to="0" class="active" aria-label="Diwali"></button>
+      <button type="button" data-bs-target="#festivalCarousel" data-bs-slide-to="1" aria-label="Wedding"></button>
+      <button type="button" data-bs-target="#festivalCarousel" data-bs-slide-to="2" aria-label="Snacks"></button>
+    </div>
+    <div class="carousel-inner">
+      <div class="carousel-item active hero-slide hero-diwali">
+        <div class="container hero-grid">
+          <div class="hero-copy">
+            <span class="hero-kicker">शुभ दीपावली · Diwali Collection</span>
+            <h1>Light up the festival with <em>pure ghee</em> mithai</h1>
+            <p>Kaju katli rolled at dawn, motichoor laddu still warm from the kadhai, and gift boxes tied in silk — delivered the same day.</p>
+            <div class="d-flex gap-2 flex-wrap">
+              <a href="{{ url_for('main.shop', kind='sweet') }}" class="btn btn-gold btn-lg">Shop Diwali sweets</a>
+              <a href="{{ url_for('main.shop', sort='expiry') }}" class="btn btn-outline-cream btn-lg">Made today</a>
+            </div>
+          </div>
+          <div class="hero-art">
+            <div class="diya-row" aria-hidden="true">
+              {% for i in range(5) %}<div class="diya" style="--d:{{ i * 0.35 }}s"><div class="flame"></div><div class="bowl"></div></div>{% endfor %}
+            </div>
+            <img src="{{ url_for('static', filename='images/products/kaju-katli.svg') }}" class="hero-plate" alt="Kaju katli platter">
+          </div>
+        </div>
+      </div>
+      <div class="carousel-item hero-slide hero-shaadi">
+        <div class="container hero-grid">
+          <div class="hero-copy">
+            <span class="hero-kicker">शादी मुबारक · Weddings &amp; Pujas</span>
+            <h1>Bulk mithai boxes for <em>every celebration</em></h1>
+            <p>From rasmalai for the sangeet to besan laddu for the puja thali — trays of 50 to 500 pieces, packed to order.</p>
+            <a href="{{ url_for('main.shop', category='milk-sweets') }}" class="btn btn-gold btn-lg">Explore milk sweets</a>
+          </div>
+          <div class="hero-art"><img src="{{ url_for('static', filename='images/products/rasmalai.svg') }}" class="hero-plate" alt="Rasmalai bowl"></div>
+        </div>
+      </div>
+      <div class="carousel-item hero-slide hero-chai">
+        <div class="container hero-grid">
+          <div class="hero-copy">
+            <span class="hero-kicker">चाय के साथ · Evening Snacks</span>
+            <h1>Crisp samosas, hot <em>kachori</em> &amp; masala dosa</h1>
+            <p>Fried fresh every afternoon in small batches. Order by 6 pm for same-evening delivery.</p>
+            <a href="{{ url_for('main.shop', kind='food') }}" class="btn btn-gold btn-lg">Order snacks</a>
+          </div>
+          <div class="hero-art"><img src="{{ url_for('static', filename='images/products/samosa.svg') }}" class="hero-plate" alt="Samosa plate"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="promise-strip">
+  <div class="container">
+    <div class="row g-3 text-center">
+      <div class="col-6 col-md-3"><i class="bi bi-droplet-half"></i><b>Desi ghee</b><span>No vanaspati, ever</span></div>
+      <div class="col-6 col-md-3"><i class="bi bi-sunrise"></i><b>Made each morning</b><span>Batch &amp; best-before on every box</span></div>
+      <div class="col-6 col-md-3"><i class="bi bi-truck"></i><b>Same-day delivery</b><span>Free over {{ config.FREE_DELIVERY_ABOVE|money }}</span></div>
+      <div class="col-6 col-md-3"><i class="bi bi-shield-check"></i><b>Secure checkout</b><span>OTP-verified orders</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="container section">
+  {{ divider('Shop by category') }}
+  <div class="category-rail">
+    {% for c in categories %}
+      <a class="category-chip kind-{{ c.kind }}" href="{{ url_for('main.shop', category=c.slug) }}">
+        <span class="cc-icon"><i class="bi {{ 'bi-heart' if c.kind == 'sweet' else 'bi-fire' }}"></i></span>
+        <span><b>{{ c.name }}</b><small>{{ c.description }}</small></span>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+
+{% if featured %}
+<section class="container section">
+  <div class="section-head">
+    <div><span class="eyebrow">लोकप्रिय · Customer favourites</span><h2>This week's bestsellers</h2></div>
+    <a href="{{ url_for('main.shop') }}" class="link-arrow">View all <i class="bi bi-arrow-right"></i></a>
+  </div>
+  <div class="product-grid">{% for item in featured %}{{ product_card(item) }}{% endfor %}</div>
+</section>
+{% endif %}
+
+<section class="festival-band">
+  <div class="container band-inner">
+    <div>
+      <span class="eyebrow light">Gifting</span>
+      <h2>The Deepavali Gift Box</h2>
+      <p>Assemble any six sweets, add a handwritten card, and we'll pack it in our brass-clasp box. Use code <b>DIWALI10</b> at checkout.</p>
+    </div>
+    <a class="btn btn-gold btn-lg" href="{{ url_for('main.shop', kind='sweet') }}">Build a box</a>
+  </div>
+</section>
+
+<section class="container section">
+  <div class="section-head">
+    <div><span class="eyebrow">मिठाई · Mithai</span><h2>Traditional sweets</h2></div>
+    <a href="{{ url_for('main.shop', kind='sweet') }}" class="link-arrow">All sweets <i class="bi bi-arrow-right"></i></a>
+  </div>
+  <div class="product-grid">{% for item in sweets %}{{ product_card(item) }}{% endfor %}</div>
+</section>
+
+<section class="container section">
+  <div class="section-head">
+    <div><span class="eyebrow">नमकीन · Savouries &amp; meals</span><h2>From our kitchen</h2></div>
+    <a href="{{ url_for('main.shop', kind='food') }}" class="link-arrow">All food <i class="bi bi-arrow-right"></i></a>
+  </div>
+  <div class="product-grid">{% for item in food %}{{ product_card(item) }}{% endfor %}</div>
+</section>
+{% endblock %}

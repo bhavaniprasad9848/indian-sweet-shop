@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>{% block title %}{{ store.name }}{% endblock %} · {{ store.name }}</title>
+  <link rel="icon" href="{{ url_for('static', filename='images/logo-mark.svg') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Mukta:wght@300;400;500;600;700&family=Tiro+Devanagari+Hindi&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+  {% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+{% from "_macros.html" import flashes with context %}
+
+<div class="topstrip">
+  <div class="container d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-stars"></i> Festival season — use <b>DIWALI10</b> for 10% off · free delivery over {{ config.FREE_DELIVERY_ABOVE|money }}</span>
+    <span class="d-none d-md-inline"><i class="bi bi-telephone"></i> {{ store.phone }}</span>
+  </div>
+</div>
+
+<nav class="navbar navbar-expand-lg site-nav sticky-top">
+  <div class="container">
+    <a class="navbar-brand brand" href="{{ url_for('main.home') }}">
+      <img src="{{ url_for('static', filename='images/logo-mark.svg') }}" alt="" width="46" height="46">
+      <span>
+        <span class="brand-name">{{ store.name }}</span>
+        <span class="brand-hi">श्री मिठाई महल</span>
+      </span>
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-label="Menu">
+      <i class="bi bi-list"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="mainNav">
+      <ul class="navbar-nav me-auto ms-lg-4">
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('main.shop', kind='sweet') }}">Mithai</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('main.shop', kind='food') }}">Namkeen &amp; Meals</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('main.shop') }}">All products</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('main.about') }}">Our story</a></li>
+      </ul>
+      <form class="nav-search me-lg-3" action="{{ url_for('main.shop') }}" role="search">
+        <i class="bi bi-search"></i>
+        <input name="q" type="search" placeholder="Search kaju katli, samosa, saffron…" aria-label="Search" value="{{ request.args.get('q','') }}">
+      </form>
+      <div class="d-flex align-items-center gap-2">
+        {% if current_user.is_authenticated and current_user.is_admin %}
+          <a class="btn btn-gold btn-sm" href="{{ url_for('admin.dashboard') }}"><i class="bi bi-speedometer2"></i> Admin</a>
+        {% else %}
+          <a class="cart-link" href="{{ url_for('cart.view') }}" aria-label="Cart">
+            <i class="bi bi-bag-heart"></i>
+            <span class="cart-badge" data-cart-count {% if not cart_count %}hidden{% endif %}>{{ cart_count }}</span>
+          </a>
+        {% endif %}
+        {% if current_user.is_authenticated %}
+          <div class="dropdown">
+            <button class="btn btn-profile dropdown-toggle" data-bs-toggle="dropdown">
+              <span class="avatar">{{ current_user.name[:1] }}</span><span class="d-none d-xl-inline">{{ current_user.name.split()[0] }}</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              {% if not current_user.is_admin %}
+              <li><a class="dropdown-item" href="{{ url_for('account.profile') }}"><i class="bi bi-person"></i> My profile</a></li>
+              <li><a class="dropdown-item" href="{{ url_for('account.orders') }}"><i class="bi bi-receipt"></i> My orders</a></li>
+              <li><a class="dropdown-item" href="{{ url_for('account.addresses') }}"><i class="bi bi-geo-alt"></i> Addresses</a></li>
+              <li><hr class="dropdown-divider"></li>
+              {% endif %}
+              <li>
+                <form method="post" action="{{ url_for('auth.logout') }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="dropdown-item"><i class="bi bi-box-arrow-right"></i> Sign out</button>
+                </form>
+              </li>
+            </ul>
+          </div>
+        {% else %}
+          <a class="btn btn-outline-cream btn-sm" href="{{ url_for('auth.login') }}">Sign in</a>
+          <a class="btn btn-saffron btn-sm d-none d-sm-inline-block" href="{{ url_for('auth.register') }}">Join</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</nav>
+<div class="toran" aria-hidden="true"></div>
+
+<main class="site-main">
+  <div class="container flash-wrap">{{ flashes() }}</div>
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="row g-4">
+      <div class="col-lg-4">
+        <div class="brand footer-brand">
+          <img src="{{ url_for('static', filename='images/logo-mark.svg') }}" alt="" width="52" height="52">
+          <span><span class="brand-name">{{ store.name }}</span><span class="brand-hi">श्री मिठाई महल</span></span>
+        </div>
+        <p class="mt-3 opacity-75">{{ store.tagline }}. Small-batch mithai made each morning with desi ghee, A2 milk and Kashmiri saffron.</p>
+      </div>
+      <div class="col-6 col-lg-2">
+        <h6>Shop</h6>
+        <a href="{{ url_for('main.shop', kind='sweet') }}">Sweets</a>
+        <a href="{{ url_for('main.shop', kind='food') }}">Snacks &amp; meals</a>
+        <a href="{{ url_for('main.shop', sort='expiry') }}">Freshest today</a>
+      </div>
+      <div class="col-6 col-lg-2">
+        <h6>Account</h6>
+        <a href="{{ url_for('account.orders') }}">Track order</a>
+        <a href="{{ url_for('cart.view') }}">Cart</a>
+        <a href="{{ url_for('auth.admin_login') }}">Staff login</a>
+      </div>
+      <div class="col-lg-4">
+        <h6>Visit us</h6>
+        <p class="mb-1"><i class="bi bi-geo-alt"></i> {{ store.address }}</p>
+        <p class="mb-1"><i class="bi bi-telephone"></i> {{ store.phone }}</p>
+        <p class="mb-1"><i class="bi bi-envelope"></i> {{ store.support }}</p>
+        <p class="small opacity-75 mt-2">Open daily 8 am – 10 pm · Same-day delivery before 6 pm</p>
+      </div>
+    </div>
+    <div class="footer-rule"></div>
+    <div class="d-flex flex-wrap justify-content-between small opacity-75">
+      <span>© {{ now.year }} {{ store.name }}. Made with love &amp; ghee.</span>
+      <span>Payments are processed in test mode. Never share your card PIN or OTP.</span>
+    </div>
+  </div>
+</footer>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastArea"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

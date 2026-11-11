@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% from "_macros.html" import veg_mark with context %}
+{% block title %}Your cart{% endblock %}
+{% block content %}
+<section class="page-banner slim"><div class="container"><span class="eyebrow light">आपकी टोकरी</span><h1>Your cart</h1></div></section>
+<div class="container section pt-4">
+  {% if not s.rows %}
+    <div class="empty-state">
+      <img src="{{ url_for('static', filename='images/empty-thali.svg') }}" alt="" width="150">
+      <h3>Your thali is empty</h3>
+      <p>Add a few sweets and come back — we'll keep them fresh.</p>
+      <a href="{{ url_for('main.shop') }}" class="btn btn-saffron">Browse sweets</a>
+    </div>
+  {% else %}
+  {% for issue in s.issues %}<div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> {{ issue }}</div>{% endfor %}
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="panel p-0">
+        {% for r in s.rows %}{% set p = r.product %}
+        <div class="cart-row">
+          <img src="{{ url_for('static', filename=p.image_url) }}" alt="" class="cart-thumb">
+          <div class="flex-grow-1">
+            <div class="d-flex align-items-center gap-2">{{ veg_mark(p.is_veg) }}<a class="cart-name" href="{{ url_for('main.product', slug=p.slug) }}">{{ p.name }}</a></div>
+            <div class="small text-muted">{{ p.unit_label }} · {{ r.unit_price|money }} each · {{ r.stock }} in stock</div>
+            <div class="small text-muted">Tax {{ r.tax|money }}</div>
+          </div>
+          <form method="post" action="{{ url_for('cart.update') }}" class="qty-stepper sm" data-stepper data-autosubmit>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="product_id" value="{{ p.id }}">
+            <button type="button" data-step="-1" aria-label="Decrease">−</button>
+            <input type="number" name="quantity" value="{{ r.quantity }}" min="0" max="{{ [r.stock, 50]|min }}" aria-label="Quantity">
+            <button type="button" data-step="1" aria-label="Increase">+</button>
+          </form>
+          <div class="cart-line-total">{{ r.base|money }}</div>
+          <form method="post" action="{{ url_for('cart.remove') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="product_id" value="{{ p.id }}">
+            <button class="btn btn-icon" aria-label="Remove {{ p.name }}"><i class="bi bi-trash3"></i></button>
+          </form>
+        </div>
+        {% endfor %}
+      </div>
+      <a href="{{ url_for('main.shop') }}" class="btn btn-link mt-2"><i class="bi bi-arrow-left"></i> Continue shopping</a>
+    </div>
+    <div class="col-lg-4">
+      <div class="panel summary-panel sticky-lg-top" style="top: 110px">
+        <h5 class="section-mini">Order summary</h5>
+        {% include "cart/_totals.html" %}
+        <form method="post" action="{{ url_for('cart.coupon') }}" class="coupon-form mt-3">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          {% if s.coupon %}
+            <div class="coupon-applied"><i class="bi bi-ticket-perforated"></i> <b>{{ s.coupon }}</b> applied
+              <button name="action" value="remove" class="btn btn-link btn-sm">Remove</button></div>
+          {% else %}
+            <div class="input-group">
+              <input class="form-control" name="code" placeholder="Festival coupon" aria-label="Coupon code">
+              <button class="btn btn-outline-maroon">Apply</button>
+            </div>
+            <div class="small text-muted mt-1">Try {% for c, v in coupons.items() %}<b>{{ c }}</b> ({{ v[3] }}){{ ', ' if not loop.last }}{% endfor %}</div>
+          {% endif %}
+        </form>
+        <a href="{{ url_for('checkout.checkout') }}" class="btn btn-saffron btn-lg w-100 mt-3 {{ 'disabled' if s.issues }}">Proceed to checkout</a>
+        <p class="small text-muted mt-2 mb-0"><i class="bi bi-shield-lock"></i> Orders are confirmed with a one-time code.</p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

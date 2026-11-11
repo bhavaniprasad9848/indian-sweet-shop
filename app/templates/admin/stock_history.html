@@ -1,0 +1,24 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import pagination with context %}
+{% block title %}Stock history{% endblock %}
+{% block heading %}Stock history{% endblock %}
+{% block content %}
+<div class="chip-filter mb-3">
+  {% for k, l in [('', 'All'), ('stock_in', 'Stock in'), ('sale', 'Sales'), ('cancel_restore', 'Restored'), ('adjustment', 'Adjustments'), ('writeoff', 'Write-offs')] %}
+    <a href="{{ url_for('admin.stock_history', type=k) }}" class="{{ 'active' if t == k }}">{{ l }}</a>
+  {% endfor %}
+</div>
+<div class="panel p-0"><div class="table-responsive">
+<table class="table table-elegant table-sm mb-0">
+  <thead><tr><th>When</th><th>Product</th><th>Batch</th><th>Type</th><th class="text-end">Qty</th><th>Order</th><th>Note</th></tr></thead>
+  <tbody>
+  {% for x in pag.items %}
+    <tr><td>{{ x.created_at|dt }}</td><td><a href="{{ url_for('admin.product_stock', pid=x.product_id) }}">{{ x.product.name }}</a></td>
+      <td>{{ x.batch.batch_number if x.batch else '—' }}</td><td><span class="txn txn-{{ x.txn_type }}">{{ x.txn_type|replace('_',' ') }}</span></td>
+      <td class="text-end {{ 'text-success' if x.quantity > 0 else 'text-danger' }}">{{ '%+d'|format(x.quantity) }}</td>
+      <td>{% if x.order %}<a href="{{ url_for('admin.order_detail', number=x.order.order_number) }}">{{ x.order.order_number }}</a>{% endif %}</td><td>{{ x.note or '' }}</td></tr>
+  {% else %}<tr><td colspan="7" class="text-center text-muted py-4">No stock movements.</td></tr>{% endfor %}
+  </tbody>
+</table></div></div>
+{{ pagination(pag, 'admin.stock_history') }}
+{% endblock %}

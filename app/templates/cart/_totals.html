@@ -1,0 +1,8 @@
+<dl class="totals">
+  <div><dt>Subtotal ({{ s.item_count }} item{{ 's' if s.item_count != 1 }})</dt><dd>{{ s.subtotal|money }}</dd></div>
+  {% if s.discount > 0 %}<div class="discount"><dt>Discount {% if s.coupon %}({{ s.coupon }}){% endif %}</dt><dd>− {{ s.discount|money }}</dd></div>{% endif %}
+  <div><dt>{{ config.TAX_LABEL }}</dt><dd>{{ s.tax|money }}</dd></div>
+  <div><dt>Delivery</dt><dd>{% if s.delivery > 0 %}{{ s.delivery|money }}{% else %}<span class="text-success">FREE</span>{% endif %}</dd></div>
+  {% if s.delivery > 0 %}<div class="hint"><dt>Add {{ (s.free_delivery_above - s.subtotal + s.discount)|money }} more for free delivery</dt><dd></dd></div>{% endif %}
+  <div class="grand"><dt>Total payable</dt><dd>{{ s.grand_total|money }}</dd></div>
+</dl>

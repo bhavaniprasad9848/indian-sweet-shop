@@ -1,0 +1,54 @@
+{% extends "emails/_layout.html" %}
+{% block badge %}Tax Invoice{% endblock %}
+{% block body %}
+{% set th = "padding:9px 8px;background:#F28C28;color:#fff;font:bold 12px Arial,sans-serif;text-align:right;" %}
+{% set td = "padding:9px 8px;border-bottom:1px solid #EAD8B8;font:13px Arial,sans-serif;text-align:right;" %}
+<p style="font:20px Georgia,serif;color:#7B1E2B;margin:8px 0 6px;">Dhanyavaad, {{ order.customer_name.split()[0] }}!</p>
+<p style="margin-top:0;">Your order is confirmed and our halwais are getting started. Your invoice is below and attached as a PDF.</p>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FFF8EC;border:1px solid #D4A017;border-radius:4px;margin:14px 0;">
+  <tr>
+    <td valign="top" style="padding:12px 14px;width:50%;font:13px Arial,sans-serif;">
+      <div style="font:bold 11px Arial;color:#7B1E2B;letter-spacing:1px;">BILLED TO</div>
+      <b>{{ order.customer_name }}</b><br>{{ order.customer_email }}<br>{{ order.customer_phone }}<br>{{ order.billing_address or order.shipping_address }}
+      <div style="font:bold 11px Arial;color:#7B1E2B;letter-spacing:1px;margin-top:10px;">DELIVER TO</div>
+      {{ order.shipping_address }}{% if order.delivery_instructions %}<br><i style="color:#8A6E5A;">“{{ order.delivery_instructions }}”</i>{% endif %}
+    </td>
+    <td valign="top" style="padding:12px 14px;border-left:1px solid #D4A017;font:13px Arial,sans-serif;">
+      <table role="presentation" width="100%" style="font:13px Arial,sans-serif;">
+        <tr><td style="color:#7B1E2B;font-weight:bold;font-size:11px;">INVOICE NO.</td><td align="right"><b>{{ invoice.invoice_number }}</b></td></tr>
+        <tr><td style="color:#7B1E2B;font-weight:bold;font-size:11px;">ORDER ID</td><td align="right">{{ order.order_number }}</td></tr>
+        <tr><td style="color:#7B1E2B;font-weight:bold;font-size:11px;">INVOICE DATE</td><td align="right">{{ invoice.invoice_date|dt }}</td></tr>
+        <tr><td style="color:#7B1E2B;font-weight:bold;font-size:11px;">PAYMENT</td><td align="right">{{ order.payment_method_label }}{% if payment and payment.card_last4 %} ({{ payment.card_brand }} •••• {{ payment.card_last4 }}){% endif %}</td></tr>
+        <tr><td style="color:#7B1E2B;font-weight:bold;font-size:11px;">TRANSACTION ID</td><td align="right" style="font-size:11px;">{{ payment.transaction_id if payment else (order.payments.first().transaction_id if order.payments.first() else '—') }}</td></tr>
+        <tr><td style="color:#7B1E2B;font-weight:bold;font-size:11px;">ORDER STATUS</td><td align="right">{{ order.status_label }}</td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #D4A017;border-collapse:collapse;">
+  <tr><th style="{{ th }}text-align:left;">Item Name</th><th style="{{ th }}">Quantity</th><th style="{{ th }}">Unit Price</th><th style="{{ th }}">Tax</th><th style="{{ th }}">Total</th></tr>
+  {% for i in order.items %}
+  <tr style="background:{{ '#FFF8EC' if loop.index is even else '#FFFFFF' }};">
+    <td style="{{ td }}text-align:left;"><b>{{ i.product_name }}</b><br><span style="color:#8A6E5A;font-size:11px;">{{ i.unit_label }}</span></td>
+    <td style="{{ td }}">{{ i.quantity }}</td><td style="{{ td }}">{{ i.unit_price|money }}</td><td style="{{ td }}">{{ i.tax_amount|money }}</td><td style="{{ td }}"><b>{{ i.line_total|money }}</b></td>
+  </tr>
+  {% endfor %}
+</table>
+
+<table role="presentation" cellpadding="0" cellspacing="0" align="right" style="margin-top:14px;width:290px;border:1px solid #D4A017;font:13px Arial,sans-serif;">
+  {% for label, value in [('Subtotal', invoice.subtotal|money), ('Discount', '− ' ~ invoice.discount|money), (config.TAX_LABEL, invoice.tax_amount|money), ('Delivery charges', invoice.delivery_charge|money if invoice.delivery_charge > 0 else 'FREE')] %}
+  <tr><td style="padding:7px 10px;border-bottom:1px solid #EAD8B8;">{{ label }}</td><td align="right" style="padding:7px 10px;border-bottom:1px solid #EAD8B8;">{{ value }}</td></tr>
+  {% endfor %}
+  <tr style="background:#7B1E2B;color:#fff;"><td style="padding:10px;font-weight:bold;">Grand Total</td><td align="right" style="padding:10px;font:bold 16px Arial;">{{ invoice.grand_total|money }}</td></tr>
+  <tr><td style="padding:7px 10px;border-bottom:1px solid #EAD8B8;">Amount Paid</td><td align="right" style="padding:7px 10px;border-bottom:1px solid #EAD8B8;">{{ invoice.amount_paid|money }}</td></tr>
+  <tr><td style="padding:7px 10px;">Payment Status</td><td align="right" style="padding:7px 10px;"><b style="color:{{ '#2F7D32' if order.payment_status == 'paid' else '#B7791F' }};">{{ 'PAID' if order.payment_status == 'paid' else 'DUE ON DELIVERY' if order.payment_status == 'pending' else order.payment_status|upper }}</b></td></tr>
+</table>
+<div style="clear:both;"></div>
+
+<div style="margin-top:26px;padding:16px;border-top:1px dashed #D4A017;text-align:center;">
+  <div style="font:italic 18px Georgia,serif;color:#7B1E2B;">Thank you for choosing {{ store.name }}</div>
+  <div style="font-size:12px;color:#8A6E5A;margin-top:6px;">Questions about your order? Reply to this email, write to {{ store.support }} or call {{ store.phone }}.<br>Please refrigerate milk-based sweets and enjoy within the best-before date.</div>
+</div>
+{% endblock %}

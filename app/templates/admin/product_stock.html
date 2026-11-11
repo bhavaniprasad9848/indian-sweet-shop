@@ -1,0 +1,64 @@
+{% extends "admin/base.html" %}
+{% block title %}Stock · {{ p.name }}{% endblock %}
+{% block heading %}{{ p.name }} — batches{% endblock %}
+{% block subheading %}<p class="admin-sub">{{ stock }} sellable units · {{ p.category.name }} · shelf life {{ p.shelf_life_days }} days</p>{% endblock %}
+{% block top_actions %}<a href="{{ url_for('admin.product_edit', pid=p.id) }}" class="btn btn-sm btn-outline-maroon"><i class="bi bi-pencil"></i> Edit product</a>{% endblock %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-xl-4">
+    <div class="panel">
+      <h5 class="section-mini">Add a new batch</h5>
+      <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="form-label">Quantity</label><input type="number" class="form-control mb-2" name="quantity" min="1" required>
+        <label class="form-label">Batch number <small class="text-muted">(auto if blank)</small></label><input class="form-control mb-2" name="batch_number" maxlength="40">
+        <div class="row g-2">
+          <div class="col-6"><label class="form-label">Manufactured</label><input type="date" class="form-control" name="manufacturing_date" value="{{ today }}" required></div>
+          <div class="col-6"><label class="form-label">Expires</label><input type="date" class="form-control" name="expiration_date" value="{{ default_exp }}" required></div>
+        </div>
+        <label class="form-label mt-2">Note</label><input class="form-control mb-3" name="note" maxlength="200" placeholder="e.g. Diwali rush batch">
+        <button class="btn btn-saffron w-100">Add stock</button>
+      </form>
+    </div>
+  </div>
+  <div class="col-xl-8">
+    <div class="panel p-0"><div class="table-responsive">
+      <table class="table table-elegant align-middle mb-0">
+        <thead><tr><th>Batch</th><th>Manufactured</th><th>Expires</th><th class="text-end">Received</th><th class="text-end">Sold</th><th class="text-end">Available</th><th></th></tr></thead>
+        <tbody>
+        {% for b in batches %}{% set lv = expiry_level(b.expiration_date) %}
+          <tr class="exp-row-{{ lv[2] }} {{ 'row-muted' if b.is_written_off }}">
+            <td><b>{{ b.batch_number }}</b>{% if b.is_written_off %}<br><small class="text-muted">written off</small>{% endif %}</td>
+            <td>{{ b.manufacturing_date|d }}</td>
+            <td><span class="exp-chip exp-{{ lv[2] }}">{{ b.expiration_date|d }} · {{ lv[1] }}</span></td>
+            <td class="text-end">{{ b.quantity_received }}</td><td class="text-end">{{ b.quantity_sold }}</td>
+            <td class="text-end">
+              <form method="post" action="{{ url_for('admin.batch_adjust', bid=b.id) }}" class="d-inline-flex gap-1 justify-content-end">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="number" min="0" name="quantity_available" value="{{ b.quantity_available }}" class="form-control form-control-sm text-end" style="width:80px" {% if b.is_written_off %}disabled{% endif %}>
+                {% if not b.is_written_off %}<button class="btn btn-sm btn-outline-maroon" title="Save adjustment"><i class="bi bi-check2"></i></button>{% endif %}
+              </form>
+            </td>
+            <td>{% if not b.is_written_off and b.quantity_available %}
+              <form method="post" action="{{ url_for('admin.batch_writeoff', bid=b.id) }}" onsubmit="return confirm('Write off {{ b.quantity_available }} units of {{ b.batch_number }}?')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm {{ 'btn-danger' if lv[0] == 'expired' else 'btn-outline-danger' }}" title="Write off">{{ 'Write off' if lv[0] == 'expired' else '' }}<i class="bi bi-trash3"></i></button></form>
+            {% endif %}</td>
+          </tr>
+        {% else %}<tr><td colspan="7" class="text-center py-4 text-muted">No batches yet.</td></tr>{% endfor %}
+        </tbody>
+      </table></div></div>
+
+    <div class="panel p-0 mt-4">
+      <div class="panel-head px-3 pt-3"><h5>Stock history</h5></div>
+      <div class="table-responsive"><table class="table table-elegant table-sm mb-0">
+        <thead><tr><th>When</th><th>Type</th><th>Batch</th><th class="text-end">Qty</th><th>Note</th></tr></thead>
+        <tbody>
+        {% for t in history %}
+          <tr><td>{{ t.created_at|dt }}</td><td><span class="txn txn-{{ t.txn_type }}">{{ t.txn_type|replace('_',' ') }}</span></td>
+            <td>{{ t.batch.batch_number if t.batch else '—' }}</td><td class="text-end {{ 'text-success' if t.quantity > 0 else 'text-danger' }}">{{ '%+d'|format(t.quantity) }}</td><td>{{ t.note or '' }}</td></tr>
+        {% else %}<tr><td colspan="5" class="text-center text-muted py-3">No movements.</td></tr>{% endfor %}
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+{% endblock %}

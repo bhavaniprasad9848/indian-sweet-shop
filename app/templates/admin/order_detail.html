@@ -1,0 +1,87 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import status_badge, pay_badge with context %}
+{% block title %}{{ order.order_number }}{% endblock %}
+{% block heading %}Order {{ order.order_number }}{% endblock %}
+{% block subheading %}<p class="admin-sub">Placed {{ order.created_at|dt }} {{ status_badge(order.status) }} {{ pay_badge(order.payment_status) }}</p>{% endblock %}
+{% block top_actions %}
+{% if order.invoice %}<a class="btn btn-sm btn-outline-maroon" target="_blank" href="{{ url_for('admin.order_invoice', number=order.order_number) }}"><i class="bi bi-file-earmark-pdf"></i> Invoice</a>{% endif %}
+{% if order.cancellation and order.cancellation.credit_note_number %}<a class="btn btn-sm btn-outline-maroon" target="_blank" href="{{ url_for('admin.order_credit_note', number=order.order_number) }}"><i class="bi bi-file-earmark-minus"></i> Credit note</a>{% endif %}
+{% endblock %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-xl-8">
+    <div class="panel p-0 mb-4">
+      <table class="table table-elegant mb-0">
+        <thead><tr><th>Item</th><th class="text-end">Qty</th><th class="text-end">Unit price</th><th class="text-end">Tax</th><th class="text-end">Total</th></tr></thead>
+        <tbody>{% for i in order.items %}<tr><td><b>{{ i.product_name }}</b> <small class="text-muted">{{ i.unit_label }}</small></td><td class="text-end">{{ i.quantity }}</td><td class="text-end">{{ i.unit_price|money }}</td><td class="text-end">{{ i.tax_amount|money }}</td><td class="text-end">{{ i.line_total|money }}</td></tr>{% endfor %}</tbody>
+      </table>
+      <div class="p-3"><dl class="totals mb-0 ms-auto" style="max-width:340px">
+        <div><dt>Subtotal</dt><dd>{{ order.subtotal|money }}</dd></div>
+        <div class="discount"><dt>Discount</dt><dd>− {{ order.discount|money }}</dd></div>
+        <div><dt>{{ config.TAX_LABEL }}</dt><dd>{{ order.tax_amount|money }}</dd></div>
+        <div><dt>Delivery</dt><dd>{{ order.delivery_charge|money }}</dd></div>
+        <div class="grand"><dt>Grand total</dt><dd>{{ order.grand_total|money }}</dd></div>
+      </dl></div>
+    </div>
+
+    <div class="panel p-0 mb-4">
+      <div class="panel-head px-3 pt-3"><h5>Payments &amp; refunds</h5></div>
+      <table class="table table-elegant table-sm mb-0">
+        <thead><tr><th>When</th><th>Gateway</th><th>Method</th><th>Transaction</th><th class="text-end">Amount</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for p in payments %}<tr><td>{{ p.created_at|dt }}</td><td>{{ p.gateway }}</td><td>{{ p.method }}{% if p.card_last4 %} · {{ p.card_brand }} •••• {{ p.card_last4 }}{% elif p.upi_handle_masked %} · {{ p.upi_handle_masked }}{% endif %}</td><td><code>{{ p.transaction_id or p.gateway_reference or '—' }}</code></td><td class="text-end">{{ p.amount|money }}</td><td>{{ pay_badge(p.status) }}{% if p.failure_reason %}<br><small class="text-danger">{{ p.failure_reason }}</small>{% endif %}</td></tr>{% endfor %}
+        {% for r in refunds %}<tr class="table-refund"><td>{{ r.created_at|dt }}</td><td colspan="2">Refund{% if r.note %} — {{ r.note }}{% endif %}</td><td><code>{{ r.gateway_refund_id or '—' }}</code></td><td class="text-end text-danger">− {{ r.amount|money }}</td><td>{{ pay_badge(r.status) }}</td></tr>{% endfor %}
+        {% if not payments and not refunds %}<tr><td colspan="6" class="text-center text-muted py-3">No payments recorded.</td></tr>{% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <h5 class="section-mini">Timeline</h5>
+      <ul class="timeline">
+        {% for h in order.history|reverse %}<li><span class="dot s-{{ h.status }}"></span><div><b>{{ status_labels.get(h.status, h.status) }}</b> <small class="text-muted">{{ h.created_at|dt }} · {{ h.changed_by or 'system' }}</small>{% if h.note %}<div class="small">{{ h.note }}</div>{% endif %}</div></li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <div class="col-xl-4">
+    <div class="panel mb-4">
+      <h5 class="section-mini">Update status</h5>
+      {% if allowed %}
+      <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <select class="form-select mb-2" name="status">{% for s, l in allowed %}<option value="{{ s }}">{{ l }}</option>{% endfor %}</select>
+        <input class="form-control mb-2" name="note" maxlength="250" placeholder="Note (optional — shown in timeline)">
+        <div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="notify" value="1" id="notify" checked><label class="form-check-label" for="notify">Email the customer</label></div>
+        <button class="btn btn-saffron w-100">Update order</button>
+        <p class="small text-muted mt-2 mb-0">Cancelling restores stock to the original batches and refunds any online payment automatically.</p>
+      </form>
+      {% else %}<p class="text-muted mb-0">No further status changes available.</p>{% endif %}
+    </div>
+    <div class="panel mb-4">
+      <h5 class="section-mini">Customer</h5>
+      <p class="mb-2"><b>{{ order.customer_name }}</b><br>{{ order.customer_email }}<br>{{ order.customer_phone }}</p>
+      <h6 class="section-mini mt-3">Delivery address</h6><p class="mb-2">{{ order.shipping_address }}</p>
+      {% if order.billing_address and order.billing_address != order.shipping_address %}<h6 class="section-mini">Billing address</h6><p>{{ order.billing_address }}</p>{% endif %}
+      {% if order.delivery_instructions %}<div class="note-box"><i class="bi bi-chat-quote"></i> {{ order.delivery_instructions }}</div>{% endif %}
+    </div>
+    {% if order.cancellation %}{% set c = order.cancellation %}
+    <div class="panel mb-4 border-danger-subtle">
+      <h5 class="section-mini text-danger">Cancellation</h5>
+      <dl class="kv small">
+        <div><dt>By</dt><dd>{{ c.cancelled_by|title }}</dd></div>
+        <div><dt>When</dt><dd>{{ c.created_at|dt }}</dd></div>
+        <div><dt>Reason</dt><dd>{{ c.reason or '—' }}</dd></div>
+        <div><dt>Refund</dt><dd>{{ c.refund_amount|money }}</dd></div>
+        <div><dt>Credit note</dt><dd>{{ c.credit_note_number or '—' }}</dd></div>
+      </dl>
+    </div>
+    {% endif %}
+    <div class="panel">
+      <h5 class="section-mini">Emails sent</h5>
+      {% for e in emails %}<a class="email-row" href="{{ url_for('admin.email_view', eid=e.id) }}"><span>{{ e.subject }}</span><small>{{ e.created_at|dt }} · {{ e.status }}</small></a>
+      {% else %}<p class="text-muted small mb-0">None yet.</p>{% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

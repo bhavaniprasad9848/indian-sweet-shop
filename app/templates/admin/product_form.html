@@ -1,0 +1,40 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ 'New product' if is_new else 'Edit ' ~ p.name }}{% endblock %}
+{% block heading %}{{ 'New product' if is_new else 'Edit ' ~ p.name }}{% endblock %}
+{% block content %}
+<form method="post" enctype="multipart/form-data" class="row g-4">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="col-lg-8">
+    <div class="panel">
+      <div class="row g-3">
+        <div class="col-md-8"><label class="form-label">Product name</label><input class="form-control" name="name" value="{{ p.name or '' }}" required maxlength="120"></div>
+        <div class="col-md-4"><label class="form-label">Category</label>
+          <select class="form-select" name="category_id" required>
+            {% for c in categories %}<option value="{{ c.id }}" {% if p.category_id == c.id %}selected{% endif %}>{{ c.name }} ({{ c.kind }})</option>{% endfor %}
+          </select></div>
+        <div class="col-12"><label class="form-label">Description</label><textarea class="form-control" rows="3" name="description" maxlength="2000">{{ p.description or '' }}</textarea></div>
+        <div class="col-12"><label class="form-label">Ingredients <small class="text-muted">— comma separated, mark allergens with * (e.g. <code>Cashew*, Sugar, Ghee</code>)</small></label>
+          <input class="form-control" name="ingredients" value="{% for i in p.ingredients %}{{ i.name }}{{ '*' if i.is_allergen }}{{ ', ' if not loop.last }}{% endfor %}"></div>
+        <div class="col-md-3"><label class="form-label">Price ({{ currency_symbol }})</label><input class="form-control" type="number" step="0.01" min="0.01" name="price" value="{{ p.price or '' }}" required></div>
+        <div class="col-md-3"><label class="form-label">Pack / serving</label><input class="form-control" name="unit_label" value="{{ p.unit_label or '' }}" placeholder="250 g box"></div>
+        <div class="col-md-3"><label class="form-label">Weight (g)</label><input class="form-control" type="number" min="1" name="weight_grams" value="{{ p.weight_grams or '' }}"></div>
+        <div class="col-md-3"><label class="form-label">Shelf life (days)</label><input class="form-control" type="number" min="1" max="365" name="shelf_life_days" value="{{ p.shelf_life_days or 3 }}"></div>
+        {% if is_new %}<div class="col-md-4"><label class="form-label">Initial stock (made today)</label><input class="form-control" type="number" min="0" name="initial_stock" value="0"></div>{% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="panel">
+      <img src="{{ url_for('static', filename=p.image_url) }}" class="w-100 rounded mb-3 preview-img" id="imgPreview" alt="">
+      <label class="form-label">Product image</label>
+      <input type="file" class="form-control mb-3" name="image" accept=".png,.jpg,.jpeg,.webp,.svg" onchange="if(this.files[0]) document.getElementById('imgPreview').src = URL.createObjectURL(this.files[0])">
+      <label class="form-label">Diet</label>
+      <select class="form-select mb-3" name="is_veg"><option value="1" {% if p.is_veg %}selected{% endif %}>Vegetarian</option><option value="0" {% if not p.is_veg %}selected{% endif %}>Non-vegetarian</option></select>
+      <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="is_active" id="act" value="1" {% if p.is_active %}checked{% endif %}><label class="form-check-label" for="act">Active (visible in shop)</label></div>
+      <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" name="is_featured" id="feat" value="1" {% if p.is_featured %}checked{% endif %}><label class="form-check-label" for="feat">Featured bestseller</label></div>
+      <button class="btn btn-saffron w-100">{{ 'Create product' if is_new else 'Save changes' }}</button>
+      <a href="{{ url_for('admin.products') }}" class="btn btn-link w-100">Cancel</a>
+    </div>
+  </div>
+</form>
+{% endblock %}

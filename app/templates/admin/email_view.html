@@ -1,0 +1,15 @@
+{% extends "admin/base.html" %}
+{% block title %}Email{% endblock %}
+{% block heading %}{{ e.subject if not masked else '•••••• is your verification code' }}{% endblock %}
+{% block subheading %}<p class="admin-sub">To {{ e.recipient }} · {{ e.created_at|dt }} · {{ e.status }}{% if e.attachment_name %} · <i class="bi bi-paperclip"></i> {{ e.attachment_name }}{% endif %}</p>{% endblock %}
+{% block top_actions %}
+{% if masked %}<a class="btn btn-sm btn-outline-maroon" href="{{ url_for('admin.email_view', eid=e.id, raw=1) }}"><i class="bi bi-eye"></i> Reveal code</a>{% endif %}
+<a class="btn btn-sm btn-link" href="{{ url_for('admin.emails') }}">← Back</a>
+{% endblock %}
+{% block content %}
+{% if masked %}
+  <div class="panel text-center text-muted py-5"><i class="bi bi-shield-lock fs-1"></i><p class="mt-2">One-time codes are hidden by default.</p></div>
+{% else %}
+  <iframe class="email-frame" sandbox="" srcdoc="{{ e.html_body }}"></iframe>
+{% endif %}
+{% endblock %}
