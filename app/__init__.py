@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 
 import click
-from flask import Flask, render_template
+from flask import Flask, redirect, render_template, request, url_for
 from flask_login import current_user
 from flask_wtf.csrf import CSRFError
 
@@ -120,6 +120,9 @@ def _register_error_handlers(app):
 
     @app.errorhandler(CSRFError)
     def csrf_error(e):
+        # A duplicate submit right after signing in carries the pre-login token; the user is already in.
+        if current_user and current_user.is_authenticated and request.endpoint in ("auth.verify", "auth.login", "auth.admin_login"):
+            return redirect(url_for("admin.dashboard" if current_user.is_admin else "main.home"))
         return render_template("errors/error.html", code=400, title="Session expired",
                                message="Your form session expired. Please go back and try again."), 400
 

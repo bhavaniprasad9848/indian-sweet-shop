@@ -51,6 +51,13 @@
     if (st.hasAttribute('data-autosubmit')) input.addEventListener('change', () => st.submit());
   });
 
+  // Submit OTP forms only once (auto-submit + click/Enter would otherwise send it twice)
+  document.querySelectorAll('form[data-otp-form]').forEach(f => f.addEventListener('submit', e => {
+    if (f.dataset.sent) { e.preventDefault(); return; }
+    f.dataset.sent = '1';
+    const b = f.querySelector('button'); if (b) { b.disabled = true; b.textContent = 'Verifying…'; }
+  }));
+
   // OTP boxes: auto-advance, backspace, paste
   document.querySelectorAll('[data-otp]').forEach(wrap => {
     const boxes = [...wrap.querySelectorAll('input')];
