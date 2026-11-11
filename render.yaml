@@ -1,0 +1,40 @@
+# Render Blueprint — New → Blueprint → pick this repo.
+services:
+  - type: web
+    name: shree-mithai-mahal
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn run:app --workers 2 --threads 4 --timeout 60 --bind 0.0.0.0:$PORT
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: FLASK_CONFIG
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: OTP_SECRET
+        generateValue: true
+      - key: DATABASE_URL          # paste your Neon connection string when Render asks
+        sync: false
+      - key: STORE_TIMEZONE
+        value: America/Chicago
+      - key: PAYMENT_GATEWAY
+        value: simulated
+      # Demo mode: shows the OTP on screen because no email server is set yet.
+      # After adding the MAIL_* settings below, change this to "false".
+      - key: SHOW_DEV_OTP
+        value: "true"
+      - key: MAIL_SERVER
+        sync: false
+      - key: MAIL_PORT
+        value: "587"
+      - key: MAIL_USE_TLS
+        value: "true"
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_DEFAULT_SENDER
+        sync: false

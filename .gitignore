@@ -5,3 +5,7 @@ __pycache__/
 .pytest_cache/
 app/static/images/products/uploads/*
 !app/static/images/products/uploads/.gitkeep
+.venv/
+venv/
+.vscode/
+*.db

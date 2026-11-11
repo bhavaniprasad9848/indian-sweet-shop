@@ -9,6 +9,8 @@ reportlab>=4.0
 openpyxl>=3.1
 stripe>=8.0
 tzdata>=2024.1
+# PostgreSQL (Supabase, Neon, Render, Railway…)
+psycopg[binary]>=3.1
 # MySQL support (only needed when DATABASE_URL points at MySQL)
 PyMySQL>=1.1
 cryptography>=42

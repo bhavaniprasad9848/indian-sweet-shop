@@ -26,6 +26,11 @@ def create_app(config_name=None, overrides=None):
     if config_name == "production" and app.config["SECRET_KEY"] == "dev-only-change-me":
         raise RuntimeError("Set SECRET_KEY in the environment before running in production.")
 
+    if config_name == "production":
+        # Behind Render/Heroku-style proxies: trust X-Forwarded-* so HTTPS URLs and client IPs are correct
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+
     db.init_app(app)
     migrate.init_app(app, db)
     csrf.init_app(app)

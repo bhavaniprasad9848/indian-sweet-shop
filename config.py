@@ -11,16 +11,27 @@ def _bool(name, default=False):
     return os.environ.get(name, str(default)).strip().lower() in ("1", "true", "yes", "on")
 
 
+def _db_url(raw):
+    """Accept URLs as cloud providers print them (postgres://, postgresql://) and pick the psycopg driver."""
+    if not raw:
+        return raw
+    for prefix in ("postgres://", "postgresql://"):
+        if raw.startswith(prefix):
+            return "postgresql+psycopg://" + raw[len(prefix):]
+    return raw
+
+
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-only-change-me"
     OTP_SECRET = os.environ.get("OTP_SECRET") or SECRET_KEY
 
     # Database: SQLite by default, MySQL via DATABASE_URL=mysql+pymysql://user:pass@host/db
-    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL") or (
+    SQLALCHEMY_DATABASE_URI = _db_url(os.environ.get("DATABASE_URL")) or (
         "sqlite:///" + os.path.join(BASE_DIR, "instance", "sweetshop.db")
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
+    # pre_ping + recycle keep pooled connections healthy when a cloud database drops idle ones
+    SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True, "pool_recycle": 280}
 
     # Sessions
     SESSION_COOKIE_HTTPONLY = True
@@ -91,13 +102,15 @@ class DevelopmentConfig(Config):
 
 class ProductionConfig(Config):
     SESSION_COOKIE_SECURE = True
-    SHOW_DEV_OTP = False
+    PREFERRED_URL_SCHEME = "https"
+    # Off unless explicitly enabled (e.g. a demo deployment with no SMTP yet).
+    SHOW_DEV_OTP = _bool("SHOW_DEV_OTP", False)
 
 
 class TestingConfig(Config):
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = "sqlite://"
-    SQLALCHEMY_ENGINE_OPTIONS = {}
+    SQLALCHEMY_DATABASE_URI = _db_url(os.environ.get("TEST_DATABASE_URL")) or "sqlite://"
+    SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True} if os.environ.get("TEST_DATABASE_URL") else {}
     WTF_CSRF_ENABLED = False
     MAIL_SERVER = ""
     PAYMENT_GATEWAY = "simulated"

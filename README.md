@@ -83,7 +83,17 @@ For Gmail, turn on 2-Step Verification and create an App Password. Any SMTP prov
 - Only the card brand and last four digits are stored — never the full number or CVC.
 
 ### Database
-SQLite at `instance/sweetshop.db` by default. For MySQL:
+SQLite at `instance/sweetshop.db` by default.
+
+**Cloud Postgres (Supabase, free):**
+1. Create a project at https://supabase.com (pick a region near you, save the database password).
+2. Click **Connect** → copy the **Session pooler** connection string (works on IPv4 networks).
+3. In `.env`, set `DATABASE_URL=` to that string with `[YOUR-PASSWORD]` replaced. URL-encode special characters in the password (`@` → `%40`, `#` → `%23`).
+4. Run `python scripts/init_db.py`, then `python run.py`.
+
+Any Postgres URL works the same way (Neon, Render, Railway, Aiven); `postgres://` and `postgresql://` forms are both accepted.
+
+**MySQL:**
 ```sql
 CREATE DATABASE sweetshop CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE USER 'sweetshop'@'localhost' IDENTIFIED BY 'strong-password';
@@ -150,7 +160,19 @@ indian_sweet_shop/
 ├── config.py · run.py · requirements.txt · .env.example
 ```
 
-## Deploying
+## Deploying to Render (free)
+
+1. Push the project to GitHub.
+2. At https://render.com sign in with GitHub → **New → Blueprint** → choose the repo. Render reads `render.yaml`.
+3. When asked, paste your Neon/Postgres connection string into `DATABASE_URL` (leave the mail fields blank for now).
+4. Click **Apply**. After the build (~3 minutes) the app is live at `https://shree-mithai-mahal.onrender.com` (or similar).
+
+If the database is empty, run `python scripts/init_db.py` once from your PC with the same `DATABASE_URL`.
+The blueprint starts with `SHOW_DEV_OTP=true` so the demo works without email; add Gmail SMTP settings in
+Render → Environment and set `SHOW_DEV_OTP=false` before real customers use it. Free instances sleep after
+15 idle minutes, and uploaded product images are lost on redeploy (use the bundled artwork or external hosting).
+
+### Other hosts
 
 ```bash
 FLASK_CONFIG=production gunicorn -w 3 -b 0.0.0.0:8000 "run:app"

@@ -2,6 +2,7 @@
 from flask import Blueprint, abort, render_template, request
 from sqlalchemy import or_
 
+from ..extensions import db
 from ..models import Category, Product, ProductIngredient
 from ..services import inventory_service as inv
 from ..utils.validators import clean
@@ -48,9 +49,9 @@ def shop():
     query = Product.query.filter_by(is_active=True).join(Category)
     if q:
         like = f"%{q}%"
-        query = query.outerjoin(ProductIngredient).filter(
-            or_(Product.name.ilike(like), Product.description.ilike(like), Category.name.ilike(like),
-                ProductIngredient.name.ilike(like))).distinct()
+        ing_match = db.select(ProductIngredient.product_id).where(ProductIngredient.name.ilike(like))
+        query = query.filter(or_(Product.name.ilike(like), Product.description.ilike(like),
+                                 Category.name.ilike(like), Product.id.in_(ing_match)))
     if cat:
         query = query.filter(Category.slug == cat)
     if kind:

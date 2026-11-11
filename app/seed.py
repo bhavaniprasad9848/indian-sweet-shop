@@ -245,15 +245,26 @@ def seed_all(history_days=420, echo=print, rng_seed=7, extra_customers=44):
 
 
 def _seed_history(days, customers, products, rng, echo):
+    """Build order history in memory and flush in batches.
+
+    No per-order flushes or queries, so SQLAlchemy can send each table's rows as multi-row INSERTs —
+    this keeps seeding fast even against a remote cloud database.
+    """
     tz = ZoneInfo(current_app.config["STORE_TIMEZONE"])
     today = datetime.now(tz).date()
+    now_local = datetime.now(tz)
+    currency = current_app.config["CURRENCY"].upper()
     sweets = [p for p in products if p.category.kind == "sweet"]
     food = [p for p in products if p.category.kind == "food"]
+    kinds = {p.id: p.category.kind for p in products}
     weights_sweet = [3 if p.is_featured else 1 for p in sweets]
     weights_food = [3 if p.is_featured else 1 for p in food]
-    count = 0
-    seq = 0
-    inv_seq = 0
+    addr_of = {}
+    for a in Address.query.filter(Address.user_id.in_([u.id for u in customers])).all():
+        if a.user_id not in addr_of or a.is_default:
+            addr_of[a.user_id] = a
+    count = seq = 0
+    batch = []
     for d_ago in range(days, -1, -1):
         day = today - timedelta(days=d_ago)
         base = 4 + (3 if day.weekday() >= 5 else 0)
@@ -265,12 +276,11 @@ def _seed_history(days, customers, products, rng, echo):
         base = int(base * (0.85 + 0.25 * ((days - d_ago) / max(days, 1))))  # gentle growth
         n_orders = max(1, base + rng.randint(-2, 3))
         if d_ago == 0:
-            now_local = datetime.now(tz)
             n_orders = max(2, min(n_orders, max(2, now_local.hour - 7)))
         for _ in range(n_orders):
             seq += 1
             user = rng.choice(customers)
-            addr = user.addresses.filter_by(is_default=True).first() or user.addresses.first()
+            addr = addr_of[user.id]
             picks = {}
             for _ in range(rng.choice([1, 1, 2, 2, 3, 4])):
                 pool, w = (sweets, weights_sweet) if rng.random() < .62 else (food, weights_food)
@@ -280,8 +290,9 @@ def _seed_history(days, customers, products, rng, echo):
             t = compute_totals(list(picks.items()), coupon)
             hour = rng.choice([9, 10, 11, 12, 13, 15, 16, 17, 18, 18, 19, 19, 20, 21])
             if d_ago == 0:
-                hour = min(hour, max(8, datetime.now(tz).hour - 1))
+                hour = min(hour, max(8, now_local.hour - 1))
             created = _utc(day, hour, rng.randint(0, 59), tz)
+            confirmed = created + timedelta(minutes=2)
             method = rng.choices(["card", "upi", "cod"], [55, 22, 23])[0]
 
             if d_ago > 3:
@@ -297,78 +308,71 @@ def _seed_history(days, customers, products, rng, echo):
                       ship_zip=addr.zip_code, billing_address=addr.one_line(), subtotal=t["subtotal"],
                       discount=t["discount"], tax_amount=t["tax"], delivery_charge=t["delivery"],
                       grand_total=t["grand_total"], payment_method=method, otp_verified=True, stock_deducted=False,
-                      created_at=created, confirmed_at=created + timedelta(minutes=2), updated_at=created)
-            db.session.add(o)
-            db.session.flush()
+                      created_at=created, confirmed_at=confirmed, updated_at=created)
+            rows = [o]
             for r in t["rows"]:
                 p = r["product"]
-                db.session.add(OrderItem(order_id=o.id, product_id=p.id, product_name=p.name,
-                                         category_kind=p.category.kind, unit_label=p.unit_label,
-                                         unit_price=r["unit_price"], quantity=r["quantity"], tax_amount=r["tax"],
-                                         line_total=r["line_total"]))
-            db.session.add(OrderStatusHistory(order_id=o.id, status="pending", note="Order placed", changed_by="customer", created_at=created))
-            db.session.add(OrderStatusHistory(order_id=o.id, status="confirmed", note="Payment verified", changed_by="system", created_at=o.confirmed_at))
+                rows.append(OrderItem(order=o, product_id=p.id, product_name=p.name, category_kind=kinds[p.id],
+                                      unit_label=p.unit_label, unit_price=r["unit_price"], quantity=r["quantity"],
+                                      tax_amount=r["tax"], line_total=r["line_total"]))
+            rows.append(OrderStatusHistory(order=o, status="pending", note="Order placed", changed_by="customer", created_at=created))
+            rows.append(OrderStatusHistory(order=o, status="confirmed", note="Payment verified", changed_by="system", created_at=confirmed))
 
-            paid_online = method != "cod"
-            pay = Payment(order_id=o.id, gateway="cod" if method == "cod" else "simulated", method=method,
+            pay = Payment(order=o, gateway="cod" if method == "cod" else "simulated", method=method,
                           transaction_id=f"{'cod' if method == 'cod' else 'pay_sim'}_{seq:08x}{rng.randint(0, 0xffff):04x}",
-                          amount=o.grand_total, currency=current_app.config["CURRENCY"].upper(), created_at=o.confirmed_at,
+                          amount=t["grand_total"], currency=currency, created_at=confirmed,
                           card_brand=rng.choice(["Visa", "Mastercard", "Amex"]) if method == "card" else None,
                           card_last4=rng.choice(["4242", "4444", "0005", "1881"]) if method == "card" else None,
                           upi_handle_masked=f"{user.name[:2].lower()}***@okbank" if method == "upi" else None)
+            rows.append(pay)
             amount_paid = Decimal("0")
-            if paid_online:
-                pay.status, pay.verified_at = "succeeded", o.confirmed_at
-                o.payment_status, amount_paid = "paid", o.grand_total
+            if method != "cod":
+                pay.status, pay.verified_at = "succeeded", confirmed
+                o.payment_status, amount_paid = "paid", t["grand_total"]
             elif status == "delivered":
-                delivered = o.confirmed_at + timedelta(hours=rng.randint(1, 4))
-                pay.status, pay.verified_at = "succeeded", delivered
-                o.payment_status, amount_paid = "paid", o.grand_total
+                pay.status, pay.verified_at = "succeeded", confirmed + timedelta(hours=rng.randint(1, 4))
+                o.payment_status, amount_paid = "paid", t["grand_total"]
             else:
                 pay.status = "initiated"
                 o.payment_status = "pending"
-            db.session.add(pay)
-            db.session.flush()
 
-            inv_seq += 1
-            db.session.add(Invoice(invoice_number=f"INV-{day:%Y}-H{inv_seq:06d}", order_id=o.id,
-                                   invoice_date=o.confirmed_at, subtotal=o.subtotal, discount=o.discount,
-                                   tax_amount=o.tax_amount, delivery_charge=o.delivery_charge,
-                                   grand_total=o.grand_total, amount_paid=amount_paid, created_at=o.confirmed_at))
+            rows.append(Invoice(order=o, invoice_number=f"INV-{day:%Y}-H{seq:06d}", invoice_date=confirmed,
+                                subtotal=t["subtotal"], discount=t["discount"], tax_amount=t["tax"],
+                                delivery_charge=t["delivery"], grand_total=t["grand_total"],
+                                amount_paid=amount_paid, created_at=confirmed))
 
             if status == "delivered":
-                o.delivered_at = o.confirmed_at + timedelta(hours=rng.randint(1, 4))
+                o.delivered_at = confirmed + timedelta(hours=rng.randint(1, 4))
                 for s, h in (("preparing", .3), ("out_for_delivery", .8)):
-                    db.session.add(OrderStatusHistory(order_id=o.id, status=s, changed_by="Shop Admin",
-                                                      created_at=o.confirmed_at + timedelta(hours=h)))
-                db.session.add(OrderStatusHistory(order_id=o.id, status="delivered", changed_by="Shop Admin", created_at=o.delivered_at))
+                    rows.append(OrderStatusHistory(order=o, status=s, changed_by="Shop Admin",
+                                                   created_at=confirmed + timedelta(hours=h)))
+                rows.append(OrderStatusHistory(order=o, status="delivered", changed_by="Shop Admin", created_at=o.delivered_at))
             elif status in ("cancelled", "refunded"):
-                when = o.confirmed_at + timedelta(minutes=rng.randint(10, 90))
-                refund_amt = o.grand_total if o.payment_status == "paid" else Decimal("0")
-                c = Cancellation(order_id=o.id, cancelled_by=rng.choice(["customer", "customer", "admin"]),
-                                 reason=rng.choice(REASONS), original_amount=o.grand_total, refund_amount=refund_amt,
-                                 created_at=when)
-                db.session.add(c)
-                db.session.flush()
+                when = confirmed + timedelta(minutes=rng.randint(10, 90))
+                refund_amt = t["grand_total"] if o.payment_status == "paid" else Decimal("0")
+                c = Cancellation(order=o, cancelled_by=rng.choice(["customer", "customer", "admin"]),
+                                 reason=rng.choice(REASONS), original_amount=t["grand_total"],
+                                 refund_amount=refund_amt, created_at=when)
+                rows.append(c)
                 if refund_amt:
-                    c.credit_note_number = f"CN-{day:%Y}-H{c.id:06d}"
-                    db.session.add(Refund(order_id=o.id, payment_id=pay.id, cancellation_id=c.id, amount=refund_amt,
-                                          status="processed", gateway_refund_id=f"rf_sim_{seq:08x}",
-                                          note="Refunded to original payment method", processed_at=when, created_at=when))
-                    pay.status = "refunded"
-                    o.payment_status = "refunded"
-                    o.status = "refunded"
+                    c.credit_note_number = f"CN-{day:%Y}-H{seq:06d}"
+                    rows.append(Refund(order=o, payment=pay, cancellation=c, amount=refund_amt, status="processed",
+                                       gateway_refund_id=f"rf_sim_{seq:08x}", note="Refunded to original payment method",
+                                       processed_at=when, created_at=when))
+                    pay.status, o.payment_status, o.status = "refunded", "refunded", "refunded"
                 else:
-                    o.status = "cancelled"
-                    o.payment_status = "cancelled"
-                    pay.status = "failed"
+                    o.status, o.payment_status, pay.status = "cancelled", "cancelled", "failed"
                 o.cancelled_at = when
-                db.session.add(OrderStatusHistory(order_id=o.id, status=o.status, note=c.reason, changed_by=c.cancelled_by, created_at=when))
+                rows.append(OrderStatusHistory(order=o, status=o.status, note=c.reason, changed_by=c.cancelled_by, created_at=when))
             elif status != "confirmed":
-                db.session.add(OrderStatusHistory(order_id=o.id, status=status, changed_by="Shop Admin",
-                                                  created_at=o.confirmed_at + timedelta(minutes=40)))
+                rows.append(OrderStatusHistory(order=o, status=status, changed_by="Shop Admin",
+                                               created_at=confirmed + timedelta(minutes=40)))
+            batch.extend(rows)
             count += 1
-        if d_ago % 30 == 0:
+        if len(batch) > 3000 or d_ago == 0:
+            with db.session.no_autoflush:
+                db.session.add_all(batch)
             db.session.commit()
-    db.session.commit()
+            batch = []
+            echo(f"  … orders up to {day:%d %b %Y}") if d_ago % 60 == 0 else None
     return count
