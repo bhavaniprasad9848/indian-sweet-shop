@@ -116,6 +116,25 @@ class Product(TimestampMixin, db.Model):
     def image_url(self):
         return self.image or "images/products/placeholder.svg"
 
+    @property
+    def image_src(self):
+        """Browser URL for the picture: database-stored ("db:<id>") or a file under app/static."""
+        from flask import url_for
+        if self.image and self.image.startswith("db:"):
+            return url_for("main.product_image", image_id=int(self.image[3:]))
+        return url_for("static", filename=self.image_url)
+
+
+class ProductImage(TimestampMixin, db.Model):
+    """Uploaded product photos stored in the database, so they survive redeploys on hosts with ephemeral disks."""
+    __tablename__ = "product_images"
+    id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.Integer, db.ForeignKey("products.id", ondelete="SET NULL"), index=True)
+    filename = db.Column(db.String(255), nullable=False)
+    content_type = db.Column(db.String(50), nullable=False)
+    size_bytes = db.Column(db.Integer, nullable=False)
+    data = db.Column(db.LargeBinary, nullable=False)
+
 
 class ProductIngredient(db.Model):
     __tablename__ = "product_ingredients"

@@ -83,7 +83,7 @@
       <div class="panel summary-panel">
         <h5 class="section-mini">Order {{ order.order_number }}</h5>
         <ul class="summary-items">
-          {% for i in order.items %}<li><img src="{{ url_for('static', filename=i.product.image_url) }}" alt=""><span>{{ i.product_name }} <small>× {{ i.quantity }}</small></span><b>{{ (i.unit_price * i.quantity)|money }}</b></li>{% endfor %}
+          {% for i in order.items %}<li><img src="{{ i.product.image_src }}" alt=""><span>{{ i.product_name }} <small>× {{ i.quantity }}</small></span><b>{{ (i.unit_price * i.quantity)|money }}</b></li>{% endfor %}
         </ul>
         <dl class="totals">
           <div><dt>Subtotal</dt><dd>{{ order.subtotal|money }}</dd></div>

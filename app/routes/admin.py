@@ -11,11 +11,12 @@ from sqlalchemy import or_
 from werkzeug.utils import secure_filename
 
 from ..extensions import db
-from ..models import (Category, EmailLog, InventoryBatch, Order, OrderItem, Product, ProductIngredient,
+from ..models import (Category, EmailLog, InventoryBatch, Order, OrderItem, Product, ProductImage, ProductIngredient,
                       StockTransaction, User, ORDER_STATUSES)
 from ..services import analytics_service as an
 from ..services import inventory_service as inv
 from ..services import report_service as rs
+from ..services.image_service import store_product_image
 from ..services.email_service import provider_label
 from ..services.invoice_service import build_credit_note_pdf, build_invoice_pdf
 from ..services.order_service import ADMIN_TRANSITIONS, OrderError, update_status
@@ -92,15 +93,15 @@ def products():
                            expiry_level=inv.expiry_level, low=current_app.config["LOW_STOCK_THRESHOLD"])
 
 
-def _save_image(file):
+def _save_image(file, product=None):
+    """Store an uploaded picture in the database and return its "db:<id>" reference."""
     if not file or not file.filename:
         return None
-    ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
-    if ext not in ALLOWED_IMAGES:
-        raise ValueError("Image must be PNG, JPG, WEBP or SVG.")
-    name = f"{uuid.uuid4().hex[:12]}_{secure_filename(file.filename)}"
-    file.save(os.path.join(current_app.config["UPLOAD_FOLDER"], name))
-    return f"images/products/uploads/{name}"
+    name = secure_filename(file.filename) or "upload"
+    if "." not in name and "." in file.filename:
+        name += "." + file.filename.rsplit(".", 1)[-1].lower()
+    return store_product_image(None, name, file.read()) if product is None or not product.id \
+        else store_product_image(product, name, file.read())
 
 
 def _apply_product_form(p, form, files):
@@ -128,7 +129,7 @@ def _apply_product_form(p, form, files):
     else:
         p.category_id = cat.id
     try:
-        img = _save_image(files.get("image"))
+        img = _save_image(files.get("image"), p)
         if img:
             p.image = img
     except ValueError as e:
@@ -160,6 +161,8 @@ def product_new():
         else:
             db.session.add(p)
             db.session.flush()
+            if p.image and p.image.startswith("db:"):
+                db.session.get(ProductImage, int(p.image[3:])).product_id = p.id
             qty = to_int(request.form.get("initial_stock"), 0, lo=0, hi=100000)
             if qty:
                 inv.add_stock(p, qty, admin_id=current_user.id, commit=False)

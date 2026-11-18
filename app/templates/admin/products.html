@@ -17,7 +17,7 @@
   <tbody>
   {% for p in products %}{% set st = stocks.get(p.id, 0) %}
     <tr class="{{ 'row-muted' if not p.is_active }}">
-      <td><img src="{{ url_for('static', filename=p.image_url) }}" class="thumb" alt=""></td>
+      <td><img src="{{ p.image_src }}" class="thumb" alt=""></td>
       <td><div class="d-flex align-items-center gap-2">{{ veg_mark(p.is_veg) }}<b>{{ p.name }}</b>{% if p.is_featured %}<i class="bi bi-star-fill text-warning" title="Featured"></i>{% endif %}</div>
         <small class="text-muted">{{ p.ingredients|length }} ingredients · {{ p.shelf_life_days }}d shelf life</small></td>
       <td>{{ p.category.name }}<br><small class="text-muted">{{ p.category.kind|title }}</small></td>

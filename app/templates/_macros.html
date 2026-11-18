@@ -28,7 +28,7 @@
   {% set p = item.p %}
   <article class="product-card">
     <a href="{{ url_for('main.product', slug=p.slug) }}" class="pc-media">
-      <img src="{{ url_for('static', filename=p.image_url) }}" alt="{{ p.name }}" loading="lazy">
+      <img src="{{ p.image_src }}" alt="{{ p.name }}" loading="lazy">
       {% if p.is_featured %}<span class="pc-ribbon">Bestseller</span>{% endif %}
       {% if item.stock == 0 %}<span class="pc-soldout">Sold out today</span>{% endif %}
     </a>

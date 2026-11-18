@@ -298,3 +298,34 @@ def test_storefront_pages(client):
     assert b"Gulab Jamun" in client.get("/shop?q=cardamom").data  # ingredient search
     assert client.get("/product/kaju-katli").status_code == 200
     assert client.get("/product/nope").status_code == 404
+
+
+def test_admin_photo_upload_is_stored_in_database(client):
+    import io
+    from app.models import ProductImage
+    login_admin(client)
+    p = product("Mysore Pak")
+    jpeg = b"\xff\xd8\xff\xe0" + b"\x00" * 200 + b"\xff\xd9"
+    form = {"name": p.name, "category_id": p.category_id, "description": p.description, "price": str(p.price),
+            "unit_label": p.unit_label, "shelf_life_days": str(p.shelf_life_days), "is_veg": "1", "is_active": "1",
+            "ingredients": "Besan, Ghee*, Sugar", "image": (io.BytesIO(jpeg), "sweet.jpeg")}
+    r = client.post(f"/admin/products/{p.id}/edit", data=form, content_type="multipart/form-data")
+    assert r.status_code == 302
+    p = product("Mysore Pak")
+    assert p.image.startswith("db:")
+    img = db.session.get(ProductImage, int(p.image[3:]))
+    assert img.data == jpeg and img.content_type == "image/jpeg" and img.product_id == p.id
+    from flask import current_app
+    with current_app.test_request_context():
+        src = p.image_src
+    assert src == f"/media/product/{img.id}"
+    served = client.get(src)
+    assert served.status_code == 200 and served.data == jpeg and served.mimetype == "image/jpeg"
+    assert "immutable" in served.headers["Cache-Control"]
+    assert src.encode() in client.get("/product/mysore-pak").data
+
+    # a renamed text file is rejected
+    form["image"] = (io.BytesIO(b"not an image"), "evil.png")
+    r = client.post(f"/admin/products/{p.id}/edit", data=form, content_type="multipart/form-data",
+                    follow_redirects=True)
+    assert b"real image" in r.data

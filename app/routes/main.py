@@ -1,9 +1,9 @@
 """Storefront: home page, catalog with search/filter/sort, product detail."""
-from flask import Blueprint, abort, render_template, request
+from flask import Blueprint, abort, make_response, render_template, request
 from sqlalchemy import or_
 
 from ..extensions import db
-from ..models import Category, Product, ProductIngredient
+from ..models import Category, Product, ProductImage, ProductIngredient
 from ..services import inventory_service as inv
 from ..utils.validators import clean
 
@@ -103,3 +103,16 @@ def product(slug):
 @bp.route("/about")
 def about():
     return render_template("main/about.html")
+
+
+@bp.route("/media/product/<int:image_id>")
+def product_image(image_id):
+    """Serve a database-stored product photo. IDs never change content, so browsers may cache it for a year."""
+    img = db.session.get(ProductImage, image_id) or abort(404)
+    resp = make_response(img.data)
+    resp.headers["Content-Type"] = img.content_type
+    resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    # SVGs can carry script; this stops it running if the image is opened directly
+    resp.headers["Content-Security-Policy"] = "default-src 'none'; style-src 'unsafe-inline'; sandbox"
+    return resp

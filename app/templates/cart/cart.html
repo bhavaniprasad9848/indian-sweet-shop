@@ -18,7 +18,7 @@
       <div class="panel p-0">
         {% for r in s.rows %}{% set p = r.product %}
         <div class="cart-row">
-          <img src="{{ url_for('static', filename=p.image_url) }}" alt="" class="cart-thumb">
+          <img src="{{ p.image_src }}" alt="" class="cart-thumb">
           <div class="flex-grow-1">
             <div class="d-flex align-items-center gap-2">{{ veg_mark(p.is_veg) }}<a class="cart-name" href="{{ url_for('main.product', slug=p.slug) }}">{{ p.name }}</a></div>
             <div class="small text-muted">{{ p.unit_label }} · {{ r.unit_price|money }} each · {{ r.stock }} in stock</div>

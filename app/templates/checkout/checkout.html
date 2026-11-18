@@ -63,7 +63,7 @@
         <h5 class="section-mini">Order summary</h5>
         <ul class="summary-items">
           {% for r in s.rows %}
-          <li><img src="{{ url_for('static', filename=r.product.image_url) }}" alt=""><span>{{ r.product.name }} <small>× {{ r.quantity }}</small></span><b>{{ r.base|money }}</b></li>
+          <li><img src="{{ r.product.image_src }}" alt=""><span>{{ r.product.name }} <small>× {{ r.quantity }}</small></span><b>{{ r.base|money }}</b></li>
           {% endfor %}
         </ul>
         {% include "cart/_totals.html" %}

@@ -25,7 +25,7 @@
   </div>
   <div class="col-lg-4">
     <div class="panel">
-      <img src="{{ url_for('static', filename=p.image_url) }}" class="w-100 rounded mb-3 preview-img" id="imgPreview" alt="">
+      <img src="{{ p.image_src }}" class="w-100 rounded mb-3 preview-img" id="imgPreview" alt="">
       <label class="form-label">Product image</label>
       <input type="file" class="form-control mb-3" name="image" accept=".png,.jpg,.jpeg,.webp,.svg" onchange="if(this.files[0]) document.getElementById('imgPreview').src = URL.createObjectURL(this.files[0])">
       <label class="form-label">Diet</label>
