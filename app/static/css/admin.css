@@ -109,3 +109,9 @@ a.stat-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lift);
   .admin-top { padding: 12px 14px; }
   .expiry-summary { grid-template-columns: repeat(2, 1fr); }
 }
+
+.photo-upload { margin: 0; }
+.photo-btn { position: relative; display: inline-block; cursor: pointer; line-height: 0; }
+.photo-btn span { position: absolute; right: -4px; bottom: -4px; width: 20px; height: 20px; border-radius: 50%; background: var(--maroon, #7a1f2b);
+  color: #fff; font-size: 11px; line-height: 20px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+.photo-btn:hover .thumb { outline: 2px solid var(--saffron, #e8892b); }

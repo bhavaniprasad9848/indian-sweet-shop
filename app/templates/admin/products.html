@@ -13,11 +13,17 @@
 </form>
 <div class="panel p-0"><div class="table-responsive">
 <table class="table table-elegant align-middle mb-0">
-  <thead><tr><th></th><th>Product</th><th>Category</th><th class="text-end">Price</th><th>Pack</th><th class="text-end">Stock</th><th>Nearest expiry</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
+  <thead><tr><th>Photo</th><th>Product</th><th>Category</th><th class="text-end">Price</th><th>Pack</th><th class="text-end">Stock</th><th>Nearest expiry</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
   <tbody>
   {% for p in products %}{% set st = stocks.get(p.id, 0) %}
     <tr class="{{ 'row-muted' if not p.is_active }}">
-      <td><img src="{{ p.image_src }}" class="thumb" alt=""></td>
+      <td>
+        <form method="post" action="{{ url_for('admin.product_image_upload', pid=p.id) }}" enctype="multipart/form-data" class="photo-upload">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="q" value="{{ q }}">
+          <input type="file" name="image" id="photo{{ p.id }}" accept=".png,.jpg,.jpeg,.webp,.svg" hidden onchange="if(this.files.length) this.form.submit()">
+          <label for="photo{{ p.id }}" class="photo-btn" title="Upload / change photo"><img src="{{ p.image_src }}" class="thumb" alt=""><span><i class="bi bi-camera-fill"></i></span></label>
+        </form>
+      </td>
       <td><div class="d-flex align-items-center gap-2">{{ veg_mark(p.is_veg) }}<b>{{ p.name }}</b>{% if p.is_featured %}<i class="bi bi-star-fill text-warning" title="Featured"></i>{% endif %}</div>
         <small class="text-muted">{{ p.ingredients|length }} ingredients · {{ p.shelf_life_days }}d shelf life</small></td>
       <td>{{ p.category.name }}<br><small class="text-muted">{{ p.category.kind|title }}</small></td>
@@ -27,6 +33,7 @@
       <td>{% if p.id in nearest %}{% set lv = expiry_level(nearest[p.id]) %}<span class="exp-chip exp-{{ lv[2] }}">{{ nearest[p.id].strftime('%d %b') }} · {{ lv[1] }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
       <td>{{ '<span class="status-pill s-green">Active</span>'|safe if p.is_active else '<span class="status-pill s-muted">Inactive</span>'|safe }}</td>
       <td class="text-end text-nowrap">
+        <label for="photo{{ p.id }}" class="btn btn-sm btn-outline-maroon mb-0" title="Upload / change photo"><i class="bi bi-image"></i></label>
         <a class="btn btn-sm btn-outline-maroon" href="{{ url_for('admin.product_edit', pid=p.id) }}" title="Edit"><i class="bi bi-pencil"></i></a>
         <a class="btn btn-sm btn-outline-maroon" href="{{ url_for('admin.product_stock', pid=p.id) }}" title="Stock & batches"><i class="bi bi-boxes"></i></a>
         <form method="post" action="{{ url_for('admin.product_toggle', pid=p.id) }}" class="d-inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

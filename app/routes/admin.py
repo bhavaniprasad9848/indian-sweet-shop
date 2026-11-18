@@ -191,6 +191,32 @@ def product_edit(pid):
                            Category.sort_order).all(), is_new=False)
 
 
+@bp.route("/products/<int:pid>/image", methods=["POST"])
+@admin_required
+def product_image_upload(pid):
+    """Quick photo upload/replace from the product list (no need to open the full edit form)."""
+    p = db.session.get(Product, pid) or abort(404)
+    back = url_for("admin.products", q=request.form.get("q") or None)
+    file = request.files.get("image")
+    if not file or not file.filename:
+        flash("Choose a photo to upload.", "warning")
+        return redirect(back)
+    old = p.image if p.image and p.image.startswith("db:") else None
+    try:
+        _save_image(file, p)
+        if old and old != p.image:  # drop the replaced photo so the database doesn't fill up with unused pictures
+            still_used = Product.query.filter(Product.image == old, Product.id != p.id).first()
+            prev = db.session.get(ProductImage, int(old[3:]))
+            if prev and not still_used:
+                db.session.delete(prev)
+        db.session.commit()
+        flash(f"Photo updated for {p.name}.", "success")
+    except ValueError as e:
+        db.session.rollback()
+        flash(str(e), "danger")
+    return redirect(back)
+
+
 @bp.route("/products/<int:pid>/toggle", methods=["POST"])
 @admin_required
 def product_toggle(pid):

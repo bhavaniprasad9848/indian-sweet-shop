@@ -329,3 +329,31 @@ def test_admin_photo_upload_is_stored_in_database(client):
     r = client.post(f"/admin/products/{p.id}/edit", data=form, content_type="multipart/form-data",
                     follow_redirects=True)
     assert b"real image" in r.data
+
+
+def test_admin_quick_photo_upload_from_product_list(client):
+    import io
+    from app.models import ProductImage
+    login_admin(client)
+    p = product("Kaju Katli")
+    assert b"photo%d" % p.id in client.get("/admin/products").data
+    jpeg = b"\xff\xd8\xff\xe0" + b"\x01" * 100 + b"\xff\xd9"
+    r = client.post(f"/admin/products/{p.id}/image", data={"image": (io.BytesIO(jpeg), "kk.jpg")},
+                    content_type="multipart/form-data")
+    assert r.status_code == 302
+    p = product("Kaju Katli")
+    first = p.image
+    assert first.startswith("db:") and db.session.get(ProductImage, int(first[3:])).data == jpeg
+    # replacing removes the old picture
+    jpeg2 = b"\xff\xd8\xff\xe0" + b"\x02" * 100 + b"\xff\xd9"
+    client.post(f"/admin/products/{p.id}/image", data={"image": (io.BytesIO(jpeg2), "kk2.jpg")},
+                content_type="multipart/form-data")
+    p = product("Kaju Katli")
+    assert p.image != first and db.session.get(ProductImage, int(first[3:])) is None
+    # bad file is rejected, product keeps its photo
+    r = client.post(f"/admin/products/{p.id}/image", data={"image": (io.BytesIO(b"nope"), "x.png")},
+                    content_type="multipart/form-data", follow_redirects=True)
+    assert b"real image" in r.data and product("Kaju Katli").image == p.image
+    # non-admins can't use it
+    client.get("/auth/logout")
+    assert client.post(f"/admin/products/{p.id}/image", data={}).status_code in (302, 401, 403)
