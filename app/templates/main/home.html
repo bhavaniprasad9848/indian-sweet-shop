@@ -23,12 +23,7 @@
               <a href="{{ url_for('main.shop', sort='expiry') }}" class="btn btn-outline-cream btn-lg">Made today</a>
             </div>
           </div>
-          <div class="hero-art">
-            <div class="diya-row" aria-hidden="true">
-              {% for i in range(5) %}<div class="diya" style="--d:{{ i * 0.35 }}s"><div class="flame"></div><div class="bowl"></div></div>{% endfor %}
-            </div>
-            <img src="{{ url_for('static', filename='images/products/kaju-katli.svg') }}" class="hero-plate" alt="Kaju katli platter">
-          </div>
+          <div class="hero-art"><img src="{{ url_for('static', filename='images/hero/diwali-sweets.webp') }}" class="hero-photo hero-photo-wide" alt="Diwali sweets gift box surrounded by diyas and marigold flowers"></div>
         </div>
       </div>
       <div class="carousel-item hero-slide hero-shaadi">
